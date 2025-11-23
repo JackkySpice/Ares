@@ -38,7 +38,7 @@ pub mod config;
 pub mod decoders;
 /// The filtration system builds what decoders to use at runtime
 /// By default it will use them all.
-mod filtration_system;
+pub mod filtration_system;
 /// The searcher is the thing which searches for the plaintext
 /// It is the core of the program.
 mod searchers;
