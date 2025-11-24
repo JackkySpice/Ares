@@ -5,7 +5,7 @@
 //! handling user input, and converting between different color formats.
 
 use colored::Colorize;
-use gibberish_or_not::download_model_with_progress_bar;
+// use gibberish_or_not::download_model_with_progress_bar;
 use rpassword;
 use std::collections::HashMap;
 use std::fmt::Display;
@@ -330,7 +330,8 @@ pub fn run_first_time_setup() -> HashMap<String, String> {
         }
     }
 
-    // Enhanced detection section
+    // Enhanced detection section - DISABLED due to dependency issues
+    /*
     println!(
         "{}",
         print_question("\nWould you like to enable Enhanced Plaintext Detection?")
@@ -414,6 +415,7 @@ pub fn run_first_time_setup() -> HashMap<String, String> {
             println!("{}", print_success("Model downloaded successfully!"));
         }
     }
+    */
 
     // show cute cat
     if ask_yes_no_question("Do you want to see a cute cat?", false) {

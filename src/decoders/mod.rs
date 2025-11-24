@@ -91,6 +91,7 @@ pub mod bacon_cipher_decoder;
 pub mod base32hex_decoder;
 pub mod affine_cipher;
 pub mod beaufort_decoder;
+pub mod xor_decoder;
 
 use atbash_decoder::AtbashDecoder;
 use base32_decoder::Base32Decoder;
@@ -134,6 +135,7 @@ use bacon_cipher_decoder::BaconCipherDecoder;
 use base32hex_decoder::Base32HexDecoder;
 use affine_cipher::AffineCipherDecoder;
 use beaufort_decoder::BeaufortDecoder;
+use xor_decoder::XorDecoder;
 
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
@@ -217,6 +219,8 @@ pub enum DecoderType {
     AffineCipherDecoder(affine_cipher::AffineCipherDecoder),
     /// beaufort decoder
     BeaufortDecoder(beaufort_decoder::BeaufortDecoder),
+    /// xor decoder
+    XorDecoder(xor_decoder::XorDecoder),
 }
 
 /// Wrapper struct to hold Decoders for DECODER_MAP
@@ -358,6 +362,10 @@ pub static DECODER_MAP: Lazy<HashMap<&str, DecoderBox>> = Lazy::new(|| {
         (
             "Beaufort Cipher",
             DecoderBox::new(Decoder::<BeaufortDecoder>::new()),
+        ),
+        (
+            "XOR",
+            DecoderBox::new(Decoder::<XorDecoder>::new()),
         ),
     ])
 });
