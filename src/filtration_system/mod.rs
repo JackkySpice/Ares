@@ -4,56 +4,11 @@
 use std::sync::mpsc::channel;
 
 use crate::checkers::CheckerTypes;
-use crate::cli_pretty_printing;
 use crate::config::Config;
-use crate::decoders::atbash_decoder::AtbashDecoder;
-use crate::decoders::base32_decoder::Base32Decoder;
-use crate::decoders::base58_bitcoin_decoder::Base58BitcoinDecoder;
-use crate::decoders::base58_monero_decoder::Base58MoneroDecoder;
-use crate::decoders::binary_decoder::BinaryDecoder;
-use crate::decoders::hexadecimal_decoder::HexadecimalDecoder;
-use crate::DecoderResult;
-
-use crate::decoders::base58_flickr_decoder::Base58FlickrDecoder;
-use crate::decoders::base58_ripple_decoder::Base58RippleDecoder;
-
-use crate::decoders::a1z26_decoder::A1Z26Decoder;
-use crate::decoders::base64_decoder::Base64Decoder;
-use crate::decoders::base65536_decoder::Base65536Decoder;
-use crate::decoders::base91_decoder::Base91Decoder;
-use crate::decoders::braille_decoder::BrailleDecoder;
-use crate::decoders::caesar_decoder::CaesarDecoder;
-use crate::decoders::citrix_ctx1_decoder::CitrixCTX1Decoder;
 use crate::decoders::crack_results::CrackResult;
-use crate::decoders::interface::{Crack, Decoder};
-use crate::decoders::morse_code::MorseCodeDecoder;
-use crate::decoders::railfence_decoder::RailfenceDecoder;
-use crate::decoders::reverse_decoder::ReverseDecoder;
-use crate::decoders::rot47_decoder::ROT47Decoder;
-use crate::decoders::substitution_generic_decoder::SubstitutionGenericDecoder;
-use crate::decoders::url_decoder::URLDecoder;
-use crate::decoders::vigenere_decoder::VigenereDecoder;
-use crate::decoders::z85_decoder::Z85Decoder;
-
-use crate::decoders::brainfuck_interpreter::BrainfuckInterpreter;
-
-// Import new decoders
-use crate::decoders::base62_decoder::Base62Decoder;
-use crate::decoders::ascii85_decoder::Ascii85Decoder;
-use crate::decoders::octal_decoder::OctalDecoder;
-use crate::decoders::decimal_decoder::DecimalDecoder;
-use crate::decoders::html_entity_decoder::HtmlEntityDecoder;
-use crate::decoders::punycode_decoder::PunycodeDecoder;
-use crate::decoders::quoted_printable_decoder::QuotedPrintableDecoder;
-use crate::decoders::uuencode_decoder::UUEncodeDecoder;
-use crate::decoders::base45_decoder::Base45Decoder;
-use crate::decoders::bacon_cipher_decoder::BaconCipherDecoder;
-use crate::decoders::base32hex_decoder::Base32HexDecoder;
-use crate::decoders::affine_cipher::AffineCipherDecoder;
-use crate::decoders::beaufort_decoder::BeaufortDecoder;
-use crate::decoders::xor_decoder::XorDecoder;
-use crate::decoders::hash_crack_decoder::HashCrackDecoder;
-use crate::decoders::jwt_decoder::JwtDecoder;
+use crate::decoders::interface::Crack;
+use crate::decoders::DECODER_MAP;
+use crate::DecoderResult;
 
 use log::trace;
 use rayon::prelude::*;
@@ -66,7 +21,8 @@ use rayon::prelude::*;
 /// Relevant docs: https://doc.rust-lang.org/book/ch17-02-trait-objects.html
 pub struct Decoders {
     /// Components is a vector of decoders.
-    pub components: Vec<Box<dyn Crack + Sync>>,
+    /// Uses references to static decoders to avoid recreation.
+    pub components: Vec<&'static (dyn Crack + Sync + Send)>,
 }
 
 impl Decoders {
@@ -80,13 +36,13 @@ impl Decoders {
     ///
     /// # Panics
     /// Panics if the channel sender fails to send a result, which should not happen in normal operation.
-    pub fn run(&self, text: &str, checker: CheckerTypes, config: &Config) -> MyResults {
+    pub fn run(&self, text: &str, checker: &CheckerTypes, config: &Config) -> MyResults {
         trace!("Running .crack() on all decoders");
         let (sender, receiver) = channel();
         self.components
-            .into_par_iter()
+            .par_iter()
             .try_for_each_with(sender, |s, i| {
-                let results = i.crack(text, &checker, config);
+                let results = i.crack(text, checker, config);
                 if results.success {
                     log::debug!(
                         "DEBUG: filtration_system - Decoder {} succeeded, short-circuiting",
@@ -111,7 +67,10 @@ impl Decoders {
         while let Ok(result) = receiver.recv() {
             // if we recv success, break.
             if result.success {
-                log::debug!("DEBUG: filtration_system - Received successful result from {}, returning Break", result.decoder);
+                log::debug!(
+                    "DEBUG: filtration_system - Received successful result from {}, returning Break",
+                    result.decoder
+                );
                 return MyResults::Break(result);
             }
             all_results.push(result)
@@ -182,8 +141,7 @@ impl DecoderFilter {
     }
 
     /// Check if a decoder matches the filter
-    #[allow(clippy::borrowed_box)]
-    pub fn matches(&self, decoder: &Box<dyn Crack + Sync>) -> bool {
+    pub fn matches(&self, decoder: &(dyn Crack + Sync + Send)) -> bool {
         let tags = decoder.get_tags();
 
         // If include_tags is not empty, at least one tag must match
@@ -239,7 +197,7 @@ pub fn filter_decoders_by_tags(_text_struct: &DecoderResult, filter: &DecoderFil
     let filtered_components = all_decoders
         .components
         .into_iter()
-        .filter(|decoder| filter.matches(decoder))
+        .filter(|decoder| filter.matches(*decoder))
         .collect();
 
     Decoders {
@@ -253,97 +211,17 @@ pub fn get_all_decoders() -> Decoders {
     filter_and_get_decoders(&DecoderResult::default())
 }
 
-/// Currently takes no args as this is just a spike to get all the basic functionality working
+/// Uses the DECODER_MAP to get all decoders without re-instantiating them
 pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
-    trace!("Filtering and getting all decoders");
-    let vigenere = Decoder::<VigenereDecoder>::new();
-    let binary = Decoder::<BinaryDecoder>::new();
-    let hexadecimal = Decoder::<HexadecimalDecoder>::new();
-    let base58_bitcoin = Decoder::<Base58BitcoinDecoder>::new();
-    let base58_monero = Decoder::<Base58MoneroDecoder>::new();
-    let base58_ripple = Decoder::<Base58RippleDecoder>::new();
-    let base58_flickr = Decoder::<Base58FlickrDecoder>::new();
-    let base64 = Decoder::<Base64Decoder>::new();
-    let base91 = Decoder::<Base91Decoder>::new();
-    let base65536 = Decoder::<Base65536Decoder>::new();
-    let citrix_ctx1 = Decoder::<CitrixCTX1Decoder>::new();
-    let url = Decoder::<URLDecoder>::new();
-    let base32 = Decoder::<Base32Decoder>::new();
-    let reversedecoder = Decoder::<ReverseDecoder>::new();
-    let morsecodedecoder = Decoder::<MorseCodeDecoder>::new();
-    let atbashdecoder = Decoder::<AtbashDecoder>::new();
-    let caesardecoder = Decoder::<CaesarDecoder>::new();
-    let railfencedecoder = Decoder::<RailfenceDecoder>::new();
-    let rot47decoder = Decoder::<ROT47Decoder>::new();
-    let z85 = Decoder::<Z85Decoder>::new();
-    let a1z26decoder = Decoder::<A1Z26Decoder>::new();
-    let brailledecoder = Decoder::<BrailleDecoder>::new();
-    let substitution_generic = Decoder::<SubstitutionGenericDecoder>::new();
-
-    let brainfuck = Decoder::<BrainfuckInterpreter>::new();
-
-    // New decoders
-    let base62 = Decoder::<Base62Decoder>::new();
-    let ascii85 = Decoder::<Ascii85Decoder>::new();
-    let octal = Decoder::<OctalDecoder>::new();
-    let decimal = Decoder::<DecimalDecoder>::new();
-    let html_entity = Decoder::<HtmlEntityDecoder>::new();
-    let punycode = Decoder::<PunycodeDecoder>::new();
-    let quoted_printable = Decoder::<QuotedPrintableDecoder>::new();
-    let uuencode = Decoder::<UUEncodeDecoder>::new();
-    let base45 = Decoder::<Base45Decoder>::new();
-    let bacon = Decoder::<BaconCipherDecoder>::new();
-    let base32hex = Decoder::<Base32HexDecoder>::new();
-    let affine = Decoder::<AffineCipherDecoder>::new();
-    let beaufort = Decoder::<BeaufortDecoder>::new();
-    let xor = Decoder::<XorDecoder>::new();
-    let hash_crack = Decoder::<HashCrackDecoder>::new();
-    let jwt = Decoder::<JwtDecoder>::new();
+    trace!("Getting all decoders from DECODER_MAP");
+    
+    // Iterate over DECODER_MAP and collect references
+    let components = DECODER_MAP.values()
+        .map(|decoder_box| decoder_box.get::<()>())
+        .collect();
 
     Decoders {
-        components: vec![
-            Box::new(hash_crack),
-            Box::new(jwt),
-            Box::new(vigenere),
-            Box::new(reversedecoder),
-            Box::new(base64),
-            Box::new(base58_bitcoin),
-            Box::new(base58_monero),
-            Box::new(base58_ripple),
-            Box::new(base58_flickr),
-            Box::new(base91),
-            Box::new(base65536),
-            Box::new(binary),
-            Box::new(hexadecimal),
-            Box::new(base32),
-            Box::new(morsecodedecoder),
-            Box::new(atbashdecoder),
-            Box::new(caesardecoder),
-            Box::new(railfencedecoder),
-            Box::new(citrix_ctx1),
-            Box::new(url),
-            Box::new(rot47decoder),
-            Box::new(z85),
-            Box::new(a1z26decoder),
-            Box::new(brailledecoder),
-            Box::new(substitution_generic),
-            Box::new(brainfuck),
-            // Add new decoders
-            Box::new(base62),
-            Box::new(ascii85),
-            Box::new(octal),
-            Box::new(decimal),
-            Box::new(html_entity),
-            Box::new(punycode),
-            Box::new(quoted_printable),
-            Box::new(uuencode),
-            Box::new(base45),
-            Box::new(bacon),
-            Box::new(base32hex),
-            Box::new(affine),
-            Box::new(beaufort),
-            Box::new(xor),
-        ],
+        components,
     }
 }
 
@@ -391,7 +269,7 @@ mod tests {
         let athena_checker = Checker::<Athena>::new();
         let checker = CheckerTypes::CheckAthena(athena_checker);
         let config = crate::config::Config::default();
-        decoders.run("TXIgUm9ib3QgaXMgZ3JlYXQ=", checker, &config);
+        decoders.run("TXIgUm9ib3QgaXMgZ3JlYXQ=", &checker, &config);
         assert_eq!(true, true);
     }
 

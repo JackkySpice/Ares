@@ -109,7 +109,7 @@ fn perform_decoding(text: &DecoderResult, config: &Config) -> MyResults {
     let decoders = filter_and_get_decoders(text);
     let athena_checker = Checker::<Athena>::new();
     let checker = CheckerTypes::CheckAthena(athena_checker);
-    decoders.run(&text.text[0], checker, config)
+    decoders.run(&text.text[0], &checker, config)
 }
 
 #[cfg(test)]
