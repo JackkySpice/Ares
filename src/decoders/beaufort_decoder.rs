@@ -55,7 +55,9 @@ impl Crack for Decoder<BeaufortDecoder> {
         let clean_text: String = text.chars().filter(|c| c.is_ascii_alphabetic()).collect();
         if clean_text.is_empty() { return results; }
 
-        let checker_with_sensitivity = checker.with_sensitivity(Sensitivity::Medium);
+        // Increased sensitivity to High to avoid false positives like 'THerEwW2AN4tUrK='
+        // which can happen when input is actually Base64.
+        let checker_with_sensitivity = checker.with_sensitivity(Sensitivity::High);
 
         for key_length in 3..20 { // Check reasonable key lengths
              let key = break_beaufort(text, key_length);
