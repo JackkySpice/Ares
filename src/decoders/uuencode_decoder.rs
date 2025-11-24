@@ -2,6 +2,7 @@
 //! Performs error handling and returns a string
 
 use crate::checkers::CheckerTypes;
+use crate::config::Config;
 use crate::decoders::interface::check_string_success;
 use crate::decoders::crack_results::CrackResult;
 use crate::decoders::interface::Crack;
@@ -17,8 +18,7 @@ pub struct UUEncodeDecoder;
 impl Crack for Decoder<UUEncodeDecoder> {
     fn new() -> Decoder<UUEncodeDecoder> {
         Decoder {
-            name: "UUEncode",
-            description: "UUencoding is a form of binary-to-text encoding that originated in the Unix-to-Unix Copy program.",
+            name: "UUEncode", description: "UUencoding is a form of binary-to-text encoding that originated in the Unix-to-Unix Copy program.",
             link: "https://en.wikipedia.org/wiki/Uuencoding",
             tags: vec!["uuencode", "unix", "decoder", "legacy"],
             popularity: 0.3,
@@ -26,7 +26,7 @@ impl Crack for Decoder<UUEncodeDecoder> {
         }
     }
 
-    fn crack(&self, text: &str, checker: &CheckerTypes) -> CrackResult {
+    fn crack(&self, text: &str, checker: &CheckerTypes, config: &Config) -> CrackResult {
         trace!("Trying UUEncode with text {:?}", text);
         let mut results = CrackResult::new(self, text.to_string());
 
@@ -42,7 +42,7 @@ impl Crack for Decoder<UUEncodeDecoder> {
 
         if let Some(decoded) = decoded_text {
             if check_string_success(&decoded, text) {
-                let checker_result = checker.check(&decoded);
+                let checker_result = checker.check(&decoded, config);
                 results.unencrypted_text = Some(vec![decoded]);
                 results.update_checker(&checker_result);
             }
@@ -164,7 +164,7 @@ mod tests {
         // 48('0') 86('V') 37('%') 84('T')
         // So line: "#0V%T"
         let decoder = Decoder::<UUEncodeDecoder>::new();
-        let result = decoder.crack("#0V%T", &get_checker());
+        let result = decoder.crack("#0V%T", &get_checker(), &crate::config::Config::default());
         assert_eq!(result.unencrypted_text.unwrap()[0], "Cat");
     }
 
@@ -176,7 +176,7 @@ mod tests {
         // end
         let decoder = Decoder::<UUEncodeDecoder>::new();
         let input = "begin 644 test.txt\n#0V%T\n`\nend";
-        let result = decoder.crack(input, &get_checker());
+        let result = decoder.crack(input, &get_checker(), &crate::config::Config::default());
         assert_eq!(result.unencrypted_text.unwrap()[0], "Cat");
     }
 }

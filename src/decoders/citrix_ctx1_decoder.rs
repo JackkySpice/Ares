@@ -1,4 +1,5 @@
 use crate::checkers::CheckerTypes;
+use crate::config::Config;
 use crate::decoders::interface::check_string_success;
 
 use super::crack_results::CrackResult;
@@ -38,7 +39,7 @@ impl Crack for Decoder<CitrixCTX1Decoder> {
     /// This function does the actual decoding
     /// It returns an Option<string> if it was successful
     /// Else the Option returns nothing and the error is logged in Trace
-    fn crack(&self, text: &str, checker: &CheckerTypes) -> CrackResult {
+    fn crack(&self, text: &str, checker: &CheckerTypes, config: &Config) -> CrackResult {
         trace!("Trying citrix_ctx1 with text {:?}", text);
         let decoded_text: Result<String, Error> = decode_citrix_ctx1(text);
 
@@ -60,7 +61,7 @@ impl Crack for Decoder<CitrixCTX1Decoder> {
             return results;
         }
 
-        let checker_result = checker.check(&decoded_text);
+        let checker_result = checker.check(&decoded_text, config);
         results.unencrypted_text = Some(vec![decoded_text]);
 
         results.update_checker(&checker_result);
@@ -138,9 +139,7 @@ mod tests {
         // This tests if Citrix CTX1 can decode Citrix CTX1 successfully
         let decoder = Decoder::<CitrixCTX1Decoder>::new();
         let result = decoder.crack(
-            "MNGIKIANMEGBKIANMHGCOHECJADFPPFKINCIOBEEIFCA",
-            &get_athena_checker(),
-        );
+            "MNGIKIANMEGBKIANMHGCOHECJADFPPFKINCIOBEEIFCA", &get_athena_checker(), &crate::config::Config::default());
         assert_eq!(result.unencrypted_text.unwrap()[0], "hello world");
     }
 
@@ -149,9 +148,7 @@ mod tests {
         // This tests if Citrix CTX1 can decode lowercase strings
         let decoder = Decoder::<CitrixCTX1Decoder>::new();
         let result = decoder.crack(
-            "pbfejjdmpaffidcgkdagmkgpljbmjjdmpffajkdponeiiicnpkfpjjdmpifnilcoooelmoglincioeebjadfocehilcopdfgndhgjadfmegbjmdjknai",
-            &get_athena_checker(),
-        );
+            "pbfejjdmpaffidcgkdagmkgpljbmjjdmpffajkdponeiiicnpkfpjjdmpifnilcoooelmoglincioeebjadfocehilcopdfgndhgjadfmegbjmdjknai", &get_athena_checker(), &crate::config::Config::default());
         assert_eq!(
             result.unencrypted_text.unwrap()[0],
             "This is lowercase Citrix CTX1"
@@ -164,7 +161,7 @@ mod tests {
         // It should return None and not panic
         let citrix_ctx1_decoder = Decoder::<CitrixCTX1Decoder>::new();
         let result = citrix_ctx1_decoder
-            .crack("NUWEN43XR44TLAYHSU4DVI2ISF======", &get_athena_checker())
+            .crack("NUWEN43XR44TLAYHSU4DVI2ISF======", &get_athena_checker(), &crate::config::Config::default())
             .unencrypted_text;
         assert!(result.is_none());
     }
@@ -175,7 +172,7 @@ mod tests {
         // It should return None
         let citrix_ctx1_decoder = Decoder::<CitrixCTX1Decoder>::new();
         let result = citrix_ctx1_decoder
-            .crack("AAA", &get_athena_checker())
+            .crack("AAA", &get_athena_checker(), &crate::config::Config::default())
             .unencrypted_text;
         assert!(result.is_none());
     }
@@ -187,9 +184,7 @@ mod tests {
         let citrix_ctx1_decoder = Decoder::<CitrixCTX1Decoder>::new();
         let result = citrix_ctx1_decoder
             .crack(
-                "hello my name is panicky mc panic face!",
-                &get_athena_checker(),
-            )
+                "hello my name is panicky mc panic face!", &get_athena_checker(), &crate::config::Config::default())
             .unencrypted_text;
         assert!(result.is_none());
     }
@@ -200,7 +195,7 @@ mod tests {
         // It should return None
         let citrix_ctx1_decoder = Decoder::<CitrixCTX1Decoder>::new();
         let result = citrix_ctx1_decoder
-            .crack("", &get_athena_checker())
+            .crack("", &get_athena_checker(), &crate::config::Config::default())
             .unencrypted_text;
         assert!(result.is_none());
     }
@@ -209,7 +204,7 @@ mod tests {
     fn citrix_ctx1_decodes_emoji_successfully() {
         // This tests if Citrix CTX1 can decode an emoji
         let citrix_ctx1_decoder = Decoder::<CitrixCTX1Decoder>::new();
-        let result = citrix_ctx1_decoder.crack("😂", &get_athena_checker());
+        let result = citrix_ctx1_decoder.crack("😂", &get_athena_checker(), &crate::config::Config::default());
         assert_eq!(result.unencrypted_text.unwrap()[0], "[*");
     }
 }

@@ -4,6 +4,7 @@
 //! `result.is_some()` to see if it returned okay.
 
 use crate::checkers::CheckerTypes;
+use crate::config::Config;
 use crate::decoders::interface::check_string_success;
 use base64::{engine::general_purpose, Engine as _};
 
@@ -27,7 +28,7 @@ use log::{debug, info, trace};
 /// let athena_checker = Checker::<Athena>::new();
 /// let checker = CheckerTypes::CheckAthena(athena_checker);
 ///
-/// let result = decode_base64.crack("aGVsbG8gd29ybGQ=", &checker).unencrypted_text;
+/// let result = decode_base64.crack("aGVsbG8gd29ybGQ=", &checker, &ares::config::Config::default()).unencrypted_text;
 /// assert!(result.is_some());
 /// assert_eq!(result.unwrap()[0], "hello world");
 /// ```
@@ -48,7 +49,7 @@ impl Crack for Decoder<Base64Decoder> {
     /// This function does the actual decoding
     /// It returns an Option<string> if it was successful
     /// Else the Option returns nothing and the error is logged in Trace
-    fn crack(&self, text: &str, checker: &CheckerTypes) -> CrackResult {
+    fn crack(&self, text: &str, checker: &CheckerTypes, config: &Config) -> CrackResult {
         trace!("Trying Base64 with text {:?}", text);
 
         let mut results = CrackResult::new(self, text.to_string());
@@ -78,7 +79,7 @@ impl Crack for Decoder<Base64Decoder> {
             return results;
         }
 
-        let checker_result = checker.check(&decoded_text);
+        let checker_result = checker.check(&decoded_text, config);
         results.unencrypted_text = Some(vec![decoded_text]);
         results.update_checker(&checker_result);
 
@@ -153,7 +154,7 @@ mod tests {
     fn successful_standard_decoding() {
         let base64_decoder = Decoder::<Base64Decoder>::new();
 
-        let result = base64_decoder.crack("aGVsbG8gd29ybGQ=", &get_athena_checker());
+        let result = base64_decoder.crack("aGVsbG8gd29ybGQ=", &get_athena_checker(), &crate::config::Config::default());
         let decoded_str = &result
             .unencrypted_text
             .expect("No unencrypted text for base64");
@@ -175,7 +176,7 @@ mod tests {
         ];
 
         for (input, expected) in test_cases {
-            let result = base64_decoder.crack(input, &get_athena_checker());
+            let result = base64_decoder.crack(input, &get_athena_checker(), &crate::config::Config::default());
             let decoded_str = &result
                 .unencrypted_text
                 .unwrap_or_else(|| panic!("Failed to decode URL-safe string: {}", input));
@@ -187,7 +188,7 @@ mod tests {
     fn base64_decode_empty_string() {
         let base64_decoder = Decoder::<Base64Decoder>::new();
         let result = base64_decoder
-            .crack("", &get_athena_checker())
+            .crack("", &get_athena_checker(), &crate::config::Config::default())
             .unencrypted_text;
         assert!(result.is_none());
     }
@@ -197,9 +198,7 @@ mod tests {
         let base64_decoder = Decoder::<Base64Decoder>::new();
         let result = base64_decoder
             .crack(
-                "hello my name is panicky mc panic face!",
-                &get_athena_checker(),
-            )
+                "hello my name is panicky mc panic face!", &get_athena_checker(), &crate::config::Config::default())
             .unencrypted_text;
         assert!(
             result.is_none(),
@@ -211,7 +210,7 @@ mod tests {
     fn base64_handle_panic_if_emoji() {
         let base64_decoder = Decoder::<Base64Decoder>::new();
         let result = base64_decoder
-            .crack("😂", &get_athena_checker())
+            .crack("😂", &get_athena_checker(), &crate::config::Config::default())
             .unencrypted_text;
         assert!(
             result.is_none(),
@@ -227,7 +226,7 @@ mod tests {
 
         let mut current = input.to_string();
         for _ in 0..3 {
-            let result = base64_decoder.crack(&current, &get_athena_checker());
+            let result = base64_decoder.crack(&current, &get_athena_checker(), &crate::config::Config::default());
             assert!(
                 result.unencrypted_text.is_some(),
                 "Failed to decode base64 layer"
@@ -247,14 +246,14 @@ mod tests {
         let checker = get_athena_checker();
 
         // Test standard Base64 (with standard chars)
-        let standard_result = base64_decoder.crack("SGVsbG8+Pz8/Cg==", &checker);
+        let standard_result = base64_decoder.crack("SGVsbG8+Pz8/Cg==", &checker, &crate::config::Config::default());
         assert!(
             standard_result.unencrypted_text.is_some(),
             "Failed to decode standard Base64"
         );
 
         // Test URL-safe Base64
-        let url_safe_result = base64_decoder.crack("SGVsbG8-Pz8_Cg", &checker);
+        let url_safe_result = base64_decoder.crack("SGVsbG8-Pz8_Cg", &checker, &crate::config::Config::default());
         assert!(
             url_safe_result.unencrypted_text.is_some(),
             "Failed to decode URL-safe Base64"
@@ -268,7 +267,7 @@ mod tests {
         let base64_decoder = Decoder::<Base64Decoder>::new();
         let checker = get_athena_checker();
 
-        let result = base64_decoder.crack("aGVsbG8", &checker);
+        let result = base64_decoder.crack("aGVsbG8", &checker, &crate::config::Config::default());
         assert!(result.unencrypted_text.is_some());
         assert_eq!(result.unencrypted_text.unwrap()[0], "hello");
     }

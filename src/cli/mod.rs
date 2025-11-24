@@ -83,7 +83,8 @@ pub fn parse_cli_args() -> (String, Config) {
 
     // If both the file and text are proivded, panic because we're not sure which one to use
     if opts.file.is_some() && opts.text.is_some() {
-        panic_failure_both_input_and_fail_provided();
+        let config = Config::default();
+        panic_failure_both_input_and_fail_provided(&config);
     }
 
     let input_text: String = if opts.file.is_some() {
@@ -179,7 +180,7 @@ fn cli_args_into_config_struct(opts: Opts, text: String) -> (String, Config) {
         config.enhanced_detection = true;
         eprintln!(
             "{}",
-            cli_pretty_printing::statement("Enhanced detection enabled.", None)
+            cli_pretty_printing::statement("Enhanced detection enabled.", None, &config)
         );
     }
 

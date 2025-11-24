@@ -1,4 +1,5 @@
 use crate::checkers::CheckerTypes;
+use crate::config::Config;
 use crate::decoders::interface::check_string_success;
 
 use super::crack_results::CrackResult;
@@ -28,7 +29,7 @@ impl Crack for Decoder<MorseCodeDecoder> {
     /// This function does the actual decoding
     /// It returns an Option<string> if it was successful
     /// Else the Option returns nothing and the error is logged in Trace
-    fn crack(&self, text: &str, checker: &CheckerTypes) -> CrackResult {
+    fn crack(&self, text: &str, checker: &CheckerTypes, config: &Config) -> CrackResult {
         trace!("Trying Morse Code with text {:?}", text);
         // TODO support new line and slash morse code
         let text = normalise_morse_string(text);
@@ -55,7 +56,7 @@ impl Crack for Decoder<MorseCodeDecoder> {
             return results;
         }
 
-        let checker_result = checker.check(&decoded_text);
+        let checker_result = checker.check(&decoded_text, config);
         results.unencrypted_text = Some(vec![decoded_text]);
 
         results.update_checker(&checker_result);
@@ -163,6 +164,7 @@ mod tests {
     use crate::checkers::athena::Athena;
     use crate::checkers::checker_type::{Check, Checker};
     use crate::checkers::CheckerTypes;
+use crate::config::Config;
     use crate::decoders::interface::Crack;
 
     // helper for tests
@@ -175,36 +177,28 @@ mod tests {
     fn test_morse_code() {
         let decoder = Decoder::<MorseCodeDecoder>::new();
         let result = decoder.crack(
-            ".---- ----. ..--- .-.-.- .---- -.... ---.. .-.-.- ----- .-.-.- .----",
-            &get_athena_checker(),
-        );
+            ".---- ----. ..--- .-.-.- .---- -.... ---.. .-.-.- ----- .-.-.- .----", &get_athena_checker(), &crate::config::Config::default());
         assert_eq!(result.unencrypted_text.unwrap()[0], "192.168.0.1");
     }
     #[test]
     fn test_morse_code_new_line() {
         let decoder = Decoder::<MorseCodeDecoder>::new();
         let result = decoder.crack(
-            ".---- ----. ..--- .-.-.- .---- -.... ---.. .-.-.- ----- .-.-.- .----\n",
-            &get_athena_checker(),
-        );
+            ".---- ----. ..--- .-.-.- .---- -.... ---.. .-.-.- ----- .-.-.- .----\n", &get_athena_checker(), &crate::config::Config::default());
         assert_eq!(result.unencrypted_text.unwrap()[0], "192.168.0.1");
     }
     #[test]
     fn test_morse_code_new_line_with_space() {
         let decoder = Decoder::<MorseCodeDecoder>::new();
         let result = decoder.crack(
-            ".---- ----. ..--- .-.-.- .---- -.... ---.. .-.-.- ----- .-.-.- .---- \n",
-            &get_athena_checker(),
-        );
+            ".---- ----. ..--- .-.-.- .---- -.... ---.. .-.-.- ----- .-.-.- .---- \n", &get_athena_checker(), &crate::config::Config::default());
         assert_eq!(result.unencrypted_text.unwrap()[0], "192.168.0.1");
     }
     #[test]
     fn test_morse_code_carriage_return_with_space() {
         let decoder = Decoder::<MorseCodeDecoder>::new();
         let result = decoder.crack(
-            ".---- ----. ..--- .-.-.- .---- -.... ---.. .-.-.- ----- .-.-.- .---- \r",
-            &get_athena_checker(),
-        );
+            ".---- ----. ..--- .-.-.- .---- -.... ---.. .-.-.- ----- .-.-.- .---- \r", &get_athena_checker(), &crate::config::Config::default());
         assert_eq!(result.unencrypted_text.unwrap()[0], "192.168.0.1");
     }
 
@@ -212,9 +206,7 @@ mod tests {
     fn test_morse_code_both_new_line_and_carriage_return() {
         let decoder = Decoder::<MorseCodeDecoder>::new();
         let result = decoder.crack(
-            ".... . .-.. .-.. --- \n.-- --- .-. .-.. -.. -.-.-- \r.---- ..--- ...-- \r",
-            &get_athena_checker(),
-        );
+            ".... . .-.. .-.. --- \n.-- --- .-. .-.. -.. -.-.-- \r.---- ..--- ...-- \r", &get_athena_checker(), &crate::config::Config::default());
         assert_eq!(result.unencrypted_text.unwrap()[0], "HELLO WORLD! 123");
     }
 
@@ -222,9 +214,7 @@ mod tests {
     fn test_morse_code_slash() {
         let decoder = Decoder::<MorseCodeDecoder>::new();
         let result = decoder.crack(
-            r".... . .-.. .-.. --- / .-- --- .-. .-.. -.. -.-.--",
-            &get_athena_checker(),
-        );
+            r".... . .-.. .-.. --- / .-- --- .-. .-.. -.. -.-.--", &get_athena_checker(), &crate::config::Config::default());
         assert_eq!(result.unencrypted_text.unwrap()[0], "HELLO WORLD!");
     }
 
@@ -232,9 +222,7 @@ mod tests {
     fn test_morse_code_slash_tight() {
         let decoder = Decoder::<MorseCodeDecoder>::new();
         let result = decoder.crack(
-            r".... . .-.. .-.. ---/.-- --- .-. .-.. -.. -.-.--",
-            &get_athena_checker(),
-        );
+            r".... . .-.. .-.. ---/.-- --- .-. .-.. -.. -.-.--", &get_athena_checker(), &crate::config::Config::default());
         assert_eq!(result.unencrypted_text.unwrap()[0], "HELLO WORLD!");
     }
 
@@ -242,9 +230,7 @@ mod tests {
     fn test_morse_code_backslash() {
         let decoder = Decoder::<MorseCodeDecoder>::new();
         let result = decoder.crack(
-            r".... . .-.. .-.. --- \ .-- --- .-. .-.. -.. -.-.--",
-            &get_athena_checker(),
-        );
+            r".... . .-.. .-.. --- \ .-- --- .-. .-.. -.. -.-.--", &get_athena_checker(), &crate::config::Config::default());
         assert_eq!(result.unencrypted_text.unwrap()[0], "HELLO WORLD!");
     }
 
@@ -252,9 +238,7 @@ mod tests {
     fn test_morse_code_backslash_tight() {
         let decoder = Decoder::<MorseCodeDecoder>::new();
         let result = decoder.crack(
-            r".... . .-.. .-.. ---\.-- --- .-. .-.. -.. -.-.--",
-            &get_athena_checker(),
-        );
+            r".... . .-.. .-.. ---\.-- --- .-. .-.. -.. -.-.--", &get_athena_checker(), &crate::config::Config::default());
         assert_eq!(result.unencrypted_text.unwrap()[0], "HELLO WORLD!");
     }
 
@@ -263,9 +247,7 @@ mod tests {
         let decoder = Decoder::<MorseCodeDecoder>::new();
         let result = decoder.crack(
             r".... . .-.. .-.. ---
-            .-- --- .-. .-.. -.. -.-.--",
-            &get_athena_checker(),
-        );
+            .-- --- .-. .-.. -.. -.-.--", &get_athena_checker(), &crate::config::Config::default());
         assert_eq!(result.unencrypted_text.unwrap()[0], "HELLO WORLD!");
     }
 
@@ -274,8 +256,7 @@ mod tests {
         let decoder = Decoder::<MorseCodeDecoder>::new();
         let result = decoder.crack(
             r".... . .-.. .-.. --- , .-- --- .-. .-.. -.. -.-.--",
-            &get_athena_checker(),
-        );
+            &get_athena_checker(), &crate::config::Config::default());
         assert_eq!(result.unencrypted_text.unwrap()[0], "HELLO WORLD!");
     }
 
@@ -283,9 +264,8 @@ mod tests {
     fn test_morse_code_comma_tight() {
         let decoder = Decoder::<MorseCodeDecoder>::new();
         let result = decoder.crack(
-            r".... . .-.. .-.. ---,.-- --- .-. .-.. -.. -.-.--",
-            &get_athena_checker(),
-        );
+            r".... . .-.. .-.. ---, .-- --- .-. .-.. -.. -.-.--",
+            &get_athena_checker(), &crate::config::Config::default());
         assert_eq!(result.unencrypted_text.unwrap()[0], "HELLO WORLD!");
     }
 
@@ -293,9 +273,7 @@ mod tests {
     fn test_morse_code_colon() {
         let decoder = Decoder::<MorseCodeDecoder>::new();
         let result = decoder.crack(
-            r".... . .-.. .-.. --- : .-- --- .-. .-.. -.. -.-.--",
-            &get_athena_checker(),
-        );
+            r".... . .-.. .-.. --- : .-- --- .-. .-.. -.. -.-.--", &get_athena_checker(), &crate::config::Config::default());
         assert_eq!(result.unencrypted_text.unwrap()[0], "HELLO WORLD!");
     }
 
@@ -303,9 +281,7 @@ mod tests {
     fn test_morse_code_colon_tight() {
         let decoder = Decoder::<MorseCodeDecoder>::new();
         let result = decoder.crack(
-            r".... . .-.. .-.. ---:.-- --- .-. .-.. -.. -.-.--",
-            &get_athena_checker(),
-        );
+            r".... . .-.. .-.. ---:.-- --- .-. .-.. -.. -.-.--", &get_athena_checker(), &crate::config::Config::default());
         assert_eq!(result.unencrypted_text.unwrap()[0], "HELLO WORLD!");
     }
 }

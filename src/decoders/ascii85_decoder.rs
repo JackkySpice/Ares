@@ -4,6 +4,7 @@
 //! `result.is_some()` to see if it returned okay.
 
 use crate::checkers::CheckerTypes;
+use crate::config::Config;
 use crate::decoders::interface::check_string_success;
 use crate::decoders::crack_results::CrackResult;
 use crate::decoders::interface::Crack;
@@ -25,7 +26,7 @@ use log::{debug, info, trace};
 /// let athena_checker = Checker::<Athena>::new();
 /// let checker = CheckerTypes::CheckAthena(athena_checker);
 ///
-/// let result = decode_ascii85.crack("87cURD]i,\"Ebo7", &checker).unencrypted_text;
+/// let result = decode_ascii85.crack("87cURD]i, \"Ebo7", &checker, &ares::config::Config::default()).unencrypted_text;
 /// assert!(result.is_some());
 /// assert_eq!(result.unwrap()[0], "Hello World");
 /// ```
@@ -46,7 +47,7 @@ impl Crack for Decoder<Ascii85Decoder> {
     /// This function does the actual decoding
     /// It returns an Option<string> if it was successful
     /// Else the Option returns nothing and the error is logged in Trace
-    fn crack(&self, text: &str, checker: &CheckerTypes) -> CrackResult {
+    fn crack(&self, text: &str, checker: &CheckerTypes, config: &Config) -> CrackResult {
         trace!("Trying Ascii85 with text {:?}", text);
         let mut results = CrackResult::new(self, text.to_string());
         let decoded_text = decode_ascii85_no_error_handling(text);
@@ -65,7 +66,7 @@ impl Crack for Decoder<Ascii85Decoder> {
             return results;
         }
 
-        let checker_result = checker.check(&decoded_text);
+        let checker_result = checker.check(&decoded_text, config);
         results.unencrypted_text = Some(vec![decoded_text]);
         results.update_checker(&checker_result);
 
@@ -199,56 +200,56 @@ mod tests {
     fn ascii85_hello_world() {
         let decoder = Decoder::<Ascii85Decoder>::new();
         // "Hello World" -> 87cURD]i,"Ebo7
-        let result = decoder.crack("87cURD]i,\"Ebo7", &get_athena_checker());
+        let result = decoder.crack("87cURD]i, \"Ebo7", &get_athena_checker(), &crate::config::Config::default());
         assert_eq!(result.unencrypted_text.unwrap()[0], "Hello World");
     }
 
     #[test]
     fn ascii85_with_delimiters() {
         let decoder = Decoder::<Ascii85Decoder>::new();
-        let result = decoder.crack("<~87cURD]i,\"Ebo7~>", &get_athena_checker());
+        let result = decoder.crack("<~87cURD]i, \"Ebo7~>", &get_athena_checker(), &crate::config::Config::default());
         assert_eq!(result.unencrypted_text.unwrap()[0], "Hello World");
     }
 
     #[test]
     fn ascii85_z_compression() {
         let decoder = Decoder::<Ascii85Decoder>::new();
-        let result = decoder.crack("z", &get_athena_checker());
+        let result = decoder.crack("z", &get_athena_checker(), &crate::config::Config::default());
         assert_eq!(result.unencrypted_text.unwrap()[0], "\0\0\0\0");
     }
 
     #[test]
     fn ascii85_padding_cases() {
         let decoder = Decoder::<Ascii85Decoder>::new();
-        let result = decoder.crack("5l", &get_athena_checker());
+        let result = decoder.crack("5l", &get_athena_checker(), &crate::config::Config::default());
         assert_eq!(result.unencrypted_text.unwrap()[0], "A");
     }
 
     #[test]
     fn ascii85_empty() {
         let decoder = Decoder::<Ascii85Decoder>::new();
-        let result = decoder.crack("", &get_athena_checker());
+        let result = decoder.crack("", &get_athena_checker(), &crate::config::Config::default());
         assert!(result.unencrypted_text.is_none());
     }
 
     #[test]
     fn ascii85_invalid_char() {
         let decoder = Decoder::<Ascii85Decoder>::new();
-        let result = decoder.crack("NotAscii85~", &get_athena_checker());
+        let result = decoder.crack("NotAscii85~", &get_athena_checker(), &crate::config::Config::default());
         assert!(result.unencrypted_text.is_none());
     }
 
     #[test]
     fn ascii85_whitespace() {
         let decoder = Decoder::<Ascii85Decoder>::new();
-        let result = decoder.crack("8 7c URD] i,\" Ebo7", &get_athena_checker());
+        let result = decoder.crack("8 7c URD] i, \" Ebo7", &get_athena_checker(), &crate::config::Config::default());
         assert_eq!(result.unencrypted_text.unwrap()[0], "Hello World");
     }
 
     #[test]
     fn ascii85_emoji_fail() {
         let decoder = Decoder::<Ascii85Decoder>::new();
-        let result = decoder.crack("😂", &get_athena_checker());
+        let result = decoder.crack("😂", &get_athena_checker(), &crate::config::Config::default());
         assert!(result.unencrypted_text.is_none());
     }
 
@@ -256,7 +257,7 @@ mod tests {
     fn ascii85_man_page_example() {
         let encoded = "9jqo^BlbD-BleB1DJ+*+F(f,q/0JhKF<GL>Cj@.4Gp$d7F!,L7@<6@)/0JDEF<G%<+EV:2F!,O<DJ+*.@<*K0@<6L(Df-\\0Ec5e;DffZ(EZee.Bl.9pF\"AGXBPCsi+DGm>@3BB/F*&OCAfu2/AKYi(DIb:@FD,*)+C]U=@3BN#EcYf8ATD3s@q?d$AftVqCh[NqF<G:8+EV:.+Cf>-FD5W8ARlolDIal(DId<j@<?3r@:F%a+D58'ATD4$Bl@l3De:,-DJs`8ARoFb/0JMK@qB4^F!,R<AKZ@-DfTqBG%G>uD.RTpAKYo'+CT/5+Cei#DII?(E,9)oF*2M7/c";
         let decoder = Decoder::<Ascii85Decoder>::new();
-        let result = decoder.crack(encoded, &get_athena_checker());
+        let result = decoder.crack(encoded, &get_athena_checker(), &crate::config::Config::default());
         assert!(result.unencrypted_text.is_some());
         assert!(result.unencrypted_text.unwrap()[0].starts_with("Man is distinguished"));
     }

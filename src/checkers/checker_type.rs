@@ -1,6 +1,7 @@
 /// Checker_type is a type used to define checkers
 /// This means that we can standardise the way we check for plaintext
 use crate::checkers::checker_result::CheckResult;
+use crate::config::Config;
 use gibberish_or_not::Sensitivity;
 use lemmeknow::Identifier;
 
@@ -68,7 +69,7 @@ pub trait Check {
     where
         Self: Sized;
     /// Checks the given text to see if its plaintext
-    fn check(&self, text: &str) -> CheckResult;
+    fn check(&self, text: &str, config: &Config) -> CheckResult;
     /// Sets the sensitivity level for gibberish detection
     fn with_sensitivity(self, sensitivity: Sensitivity) -> Self
     where

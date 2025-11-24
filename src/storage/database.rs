@@ -113,7 +113,7 @@ fn get_db_connection() -> Result<rusqlite::Connection, rusqlite::Error> {
 /// On error setting up the database, returns a rusqlite::Error
 /// If there's an error while setting the database path, prints warning
 /// to console and continues with the default DB_PATH
-pub fn setup_database() -> Result<(), rusqlite::Error> {
+pub fn setup_database(config: &crate::config::Config) -> Result<(), rusqlite::Error> {
     match DB_PATH.get() {
         Some(_path) => (),
         None => {
@@ -122,7 +122,7 @@ pub fn setup_database() -> Result<(), rusqlite::Error> {
             match db_result {
                 Ok(_) => (),
                 Err(_e) => {
-                    crate::cli_pretty_printing::warning("Error setting database path");
+                    crate::cli_pretty_printing::warning("Error setting database path", config);
                 }
             }
         }
@@ -459,7 +459,7 @@ mod tests {
         }
 
         /// Mocked cracking function
-        fn crack(&self, text: &str, _checker: &CheckerTypes) -> CrackResult {
+        fn crack(&self, text: &str, _checker: &CheckerTypes, _config: &crate::config::Config) -> CrackResult {
             let mut results = CrackResult::new(self, text.to_string());
             results.unencrypted_text = Some(vec![String::from("mock decoded text")]);
             results

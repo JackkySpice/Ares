@@ -3,7 +3,7 @@ use gibberish_or_not::{is_gibberish, Sensitivity};
 use lemmeknow::Identifier;
 
 use crate::checkers::checker_type::{Check, Checker};
-use crate::config::get_config;
+use crate::config::Config;
 
 /// Checks English plaintext.
 pub struct EnglishChecker;
@@ -11,8 +11,6 @@ pub struct EnglishChecker;
 /// given an input, check every item in the array and return true if any of them match
 impl Check for Checker<EnglishChecker> {
     fn new() -> Self {
-        let _config = get_config();
-
         Checker {
             name: "English Checker",
             description: "Uses gibberish detection to check if text is meaningful English",
@@ -27,12 +25,11 @@ impl Check for Checker<EnglishChecker> {
         }
     }
 
-    fn check(&self, text: &str) -> CheckResult {
+    fn check(&self, text: &str, config: &Config) -> CheckResult {
         // Normalize before checking
         let text = normalise_string(text);
 
         // Get config to check if enhanced detection is enabled
-        let config = get_config();
         let is_enhanced = config.enhanced_detection;
 
         let mut result = CheckResult {
@@ -98,21 +95,24 @@ mod tests {
     #[test]
     fn test_check_basic() {
         let checker = Checker::<EnglishChecker>::new();
-        assert!(checker.check("preinterview").is_identified);
+        let config = crate::config::Config::default();
+        assert!(checker.check("preinterview", &config).is_identified);
     }
 
     #[test]
     fn test_check_basic2() {
         let checker = Checker::<EnglishChecker>::new();
-        assert!(checker.check("exuberant").is_identified);
+        let config = crate::config::Config::default();
+        assert!(checker.check("exuberant", &config).is_identified);
     }
 
     #[test]
     fn test_check_multiple_words() {
         let checker = Checker::<EnglishChecker>::new();
+        let config = crate::config::Config::default();
         assert!(
             checker
-                .check("this is a valid english sentence")
+                .check("this is a valid english sentence", &config)
                 .is_identified
         );
     }
@@ -120,9 +120,10 @@ mod tests {
     #[test]
     fn test_check_non_dictionary_word() {
         let checker = Checker::<EnglishChecker>::new();
+        let config = crate::config::Config::default();
         assert!(
             !checker
-                .check("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaBabyShark")
+                .check("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaBabyShark", &config)
                 .is_identified
         );
     }
@@ -130,7 +131,8 @@ mod tests {
     #[test]
     fn test_check_multiple_words2() {
         let checker = Checker::<EnglishChecker>::new();
-        assert!(checker.check("preinterview hello dog").is_identified);
+        let config = crate::config::Config::default();
+        assert!(checker.check("preinterview hello dog", &config).is_identified);
     }
     #[test]
     fn test_check_normalise_string_works_with_lowercasing() {
@@ -151,13 +153,15 @@ mod tests {
     #[test]
     fn test_checker_works_with_puncuation_and_lowercase() {
         let checker = Checker::<EnglishChecker>::new();
-        assert!(checker.check("Prei?nterview He!llo Dog?").is_identified);
+        let config = crate::config::Config::default();
+        assert!(checker.check("Prei?nterview He!llo Dog?", &config).is_identified);
     }
 
     #[test]
     fn test_check_fail_single_puncuation_char() {
         let checker = Checker::<EnglishChecker>::new();
-        assert!(!checker.check("#").is_identified);
+        let config = crate::config::Config::default();
+        assert!(!checker.check("#", &config).is_identified);
     }
 
     #[test]
@@ -179,13 +183,14 @@ mod tests {
     fn test_sensitivity_affects_gibberish_detection() {
         // This text has one English word "iron" but is otherwise gibberish
         let text = "Rcl maocr otmwi lit dnoen oehc 13 iron seah.";
+        let config = crate::config::Config::default();
 
         // With Low sensitivity, it should be classified as gibberish
         let low_checker = Checker::<EnglishChecker>::new().with_sensitivity(Sensitivity::Low);
-        assert!(!low_checker.check(text).is_identified);
+        assert!(!low_checker.check(text, &config).is_identified);
 
         // With High sensitivity, it should be classified as English
         let high_checker = Checker::<EnglishChecker>::new().with_sensitivity(Sensitivity::High);
-        assert!(high_checker.check(text).is_identified);
+        assert!(high_checker.check(text, &config).is_identified);
     }
 }

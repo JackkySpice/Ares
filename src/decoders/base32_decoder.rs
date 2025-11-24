@@ -4,6 +4,7 @@
 //! `result.is_some()` to see if it returned okay.
 
 use crate::checkers::CheckerTypes;
+use crate::config::Config;
 use crate::decoders::interface::check_string_success;
 
 use super::crack_results::CrackResult;
@@ -27,7 +28,7 @@ use log::{debug, info, trace};
 /// let athena_checker = Checker::<Athena>::new();
 /// let checker = CheckerTypes::CheckAthena(athena_checker);
 ///
-/// let result = decode_base32.crack("NBSWY3DPEB3W64TMMQ======", &checker).unencrypted_text;
+/// let result = decode_base32.crack("NBSWY3DPEB3W64TMMQ======", &checker, &ares::config::Config::default()).unencrypted_text;
 /// assert!(result.is_some());
 /// assert_eq!(result.unwrap()[0], "hello world");
 /// ```
@@ -48,7 +49,7 @@ impl Crack for Decoder<Base32Decoder> {
     /// This function does the actual decoding
     /// It returns an Option<string> if it was successful
     /// Else the Option returns nothing and the error is logged in Trace
-    fn crack(&self, text: &str, checker: &CheckerTypes) -> CrackResult {
+    fn crack(&self, text: &str, checker: &CheckerTypes, config: &Config) -> CrackResult {
         trace!("Trying Base32 with text {:?}", text);
         let decoded_text = decode_base32_no_error_handling(text);
         let mut results = CrackResult::new(self, text.to_string());
@@ -67,7 +68,7 @@ impl Crack for Decoder<Base32Decoder> {
             return results;
         }
 
-        let checker_result = checker.check(&decoded_text);
+        let checker_result = checker.check(&decoded_text, config);
         results.unencrypted_text = Some(vec![decoded_text]);
 
         results.update_checker(&checker_result);
@@ -128,7 +129,7 @@ mod tests {
     fn base32_decodes_successfully() {
         // This tests if Base32 can decode Base32 successfully
         let base32_decoder = Decoder::<Base32Decoder>::new();
-        let result = base32_decoder.crack("NBSWY3DPEB3W64TMMQ======", &get_athena_checker());
+        let result = base32_decoder.crack("NBSWY3DPEB3W64TMMQ======", &get_athena_checker(), &crate::config::Config::default());
         assert_eq!(result.unencrypted_text.unwrap()[0], "hello world");
     }
 
@@ -137,7 +138,7 @@ mod tests {
         // This tests if Base32 can decode Base32 with no padding successfully
         let base32_decoder = Decoder::<Base32Decoder>::new();
         let result =
-            base32_decoder.crack("KRUGS4ZANBQXGID2MVZG6IDQMFSGI2LOM4", &get_athena_checker());
+            base32_decoder.crack("KRUGS4ZANBQXGID2MVZG6IDQMFSGI2LOM4", &get_athena_checker(), &crate::config::Config::default());
         assert_eq!(result.unencrypted_text.unwrap()[0], "This has zero padding");
     }
 
@@ -146,7 +147,7 @@ mod tests {
         // This tests if Base32 can decode Base32 with broken padding successfully
         // Normally this string should have 4 equal signs instead of 2
         let base32_decoder = Decoder::<Base32Decoder>::new();
-        let result = base32_decoder.crack("JFXGG33SOJSWG5BAOBQWIZDJNZTQ==", &get_athena_checker());
+        let result = base32_decoder.crack("JFXGG33SOJSWG5BAOBQWIZDJNZTQ==", &get_athena_checker(), &crate::config::Config::default());
         assert_eq!(result.unencrypted_text.unwrap()[0], "Incorrect padding");
     }
 
@@ -157,7 +158,7 @@ mod tests {
         // The string is from the "breakit" THM room
         // TODO: Ignoring this until we have quadgrams
         let base32_decoder = Decoder::<Base32Decoder>::new();
-        let result = base32_decoder.crack("GM4HOU3VHBAW6OKNJJFW6SS2IZ3VAMTYORFDMUC2G44EQULIJI3WIVRUMNCWI6KGK5XEKZDTN5YU2RT2MR3E45KKI5TXSOJTKZJTC4KRKFDWKZTZOF3TORJTGZTXGNKCOE", &get_athena_checker());
+        let result = base32_decoder.crack("GM4HOU3VHBAW6OKNJJFW6SS2IZ3VAMTYORFDMUC2G44EQULIJI3WIVRUMNCWI6KGK5XEKZDTN5YU2RT2MR3E45KKI5TXSOJTKZJTC4KRKFDWKZTZOF3TORJTGZTXGNKCOE", &get_athena_checker(), &crate::config::Config::default());
         assert_eq!(result.unencrypted_text.unwrap()[0], "base16_is_hex");
     }
 
@@ -168,9 +169,7 @@ mod tests {
         let base32_decoder = Decoder::<Base32Decoder>::new();
         let result = base32_decoder
             .crack(
-                "hello my name is panicky mc panic face!",
-                &get_athena_checker(),
-            )
+                "hello my name is panicky mc panic face!", &get_athena_checker(), &crate::config::Config::default())
             .unencrypted_text;
         assert!(result.is_none());
     }
@@ -181,7 +180,7 @@ mod tests {
         // It should return None
         let base32_decoder = Decoder::<Base32Decoder>::new();
         let result = base32_decoder
-            .crack("", &get_athena_checker())
+            .crack("", &get_athena_checker(), &crate::config::Config::default())
             .unencrypted_text;
         assert!(result.is_none());
     }
@@ -192,7 +191,7 @@ mod tests {
         // It should return None
         let base32_decoder = Decoder::<Base32Decoder>::new();
         let result = base32_decoder
-            .crack("😂", &get_athena_checker())
+            .crack("😂", &get_athena_checker(), &crate::config::Config::default())
             .unencrypted_text;
         assert!(result.is_none());
     }

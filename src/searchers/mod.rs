@@ -12,7 +12,7 @@ use crossbeam::channel::bounded;
 use crate::checkers::athena::Athena;
 use crate::checkers::checker_type::{Check, Checker};
 use crate::checkers::CheckerTypes;
-use crate::config::get_config;
+use crate::config::Config;
 use crate::filtration_system::{filter_and_get_decoders, MyResults};
 use crate::{timer, DecoderResult};
 /// This module provides access to the A* search algorithm
@@ -41,17 +41,18 @@ mod helper_functions;
 ///    We can return an Option? An Enum? And then match on that
 ///    So if we return CrackSuccess we return
 ///    Else if we return an array, we add it to the children and go again.
-pub fn search_for_plaintext(input: String) -> Option<DecoderResult> {
-    let config = get_config();
+pub fn search_for_plaintext(input: String, config: Arc<Config>) -> Option<DecoderResult> {
     let timeout = config.timeout;
-    let timer = timer::start(timeout);
+    let timer = timer::start(timeout, config.clone());
 
     let (result_sender, result_recv) = bounded::<Option<DecoderResult>>(1);
     // For stopping the thread
     let stop = Arc::new(AtomicBool::new(false));
     let s = stop.clone();
+    
     // Use A* search algorithm instead of BFS
-    let handle = thread::spawn(move || astar::astar(input, result_sender, s));
+    let config_clone = config.clone();
+    let handle = thread::spawn(move || astar::astar(input, result_sender, s, config_clone));
 
     // In top_results mode, we don't need to return a result immediately
     // as the timer will display all results when it expires
@@ -104,11 +105,11 @@ pub fn search_for_plaintext(input: String) -> Option<DecoderResult> {
 /// and calling `.run` which in turn loops through them and calls
 /// `.crack()`.
 #[allow(dead_code)]
-fn perform_decoding(text: &DecoderResult) -> MyResults {
+fn perform_decoding(text: &DecoderResult, config: &Config) -> MyResults {
     let decoders = filter_and_get_decoders(text);
     let athena_checker = Checker::<Athena>::new();
     let checker = CheckerTypes::CheckAthena(athena_checker);
-    decoders.run(&text.text[0], checker)
+    decoders.run(&text.text[0], checker, config)
 }
 
 #[cfg(test)]
@@ -117,29 +118,32 @@ mod tests {
 
     // https://github.com/bee-san/ciphey/pull/14/files#diff-b8829c7e292562666c7fa5934de7b478c4a5de46d92e42c46215ac4d9ff89db2R37
     // Only used for tests!
-    fn exit_condition(input: &str) -> bool {
+    fn exit_condition(input: &str, config: &Config) -> bool {
         // use Athena Checker from checkers module
         // call check(input)
         let athena_checker = Checker::<Athena>::new();
         let checker = CheckerTypes::CheckAthena(athena_checker);
-        checker.check(input).is_identified
+        checker.check(input, config).is_identified
     }
 
     #[test]
     fn exit_condition_succeeds() {
-        let result = exit_condition("https://www.google.com");
+        let config = Config::default();
+        let result = exit_condition("https://www.google.com", &config);
         assert!(result);
     }
     #[test]
     fn exit_condition_fails() {
-        let result = exit_condition("vjkrerkdnxhrfjekfdjexk");
+        let config = Config::default();
+        let result = exit_condition("vjkrerkdnxhrfjekfdjexk", &config);
         assert!(!result);
     }
 
     #[test]
     fn perform_decoding_succeeds() {
         let dc = DecoderResult::_new("aHR0cHM6Ly93d3cuZ29vZ2xlLmNvbQ==");
-        let result = perform_decoding(&dc);
+        let config = Config::default();
+        let result = perform_decoding(&dc, &config);
         assert!(
             result
                 ._break_value()
@@ -152,7 +156,8 @@ mod tests {
     fn perform_decoding_succeeds_empty_string() {
         // Some decoders like base64 return even when the string is empty.
         let dc = DecoderResult::_new("");
-        let result = perform_decoding(&dc);
+        let config = Config::default();
+        let result = perform_decoding(&dc, &config);
         assert!(result._break_value().is_none());
     }
 }

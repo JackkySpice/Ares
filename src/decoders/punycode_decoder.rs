@@ -2,6 +2,7 @@
 //! Performs error handling and returns a string
 
 use crate::checkers::CheckerTypes;
+use crate::config::Config;
 use crate::decoders::interface::check_string_success;
 use crate::decoders::crack_results::CrackResult;
 use crate::decoders::interface::Crack;
@@ -17,8 +18,7 @@ pub struct PunycodeDecoder;
 impl Crack for Decoder<PunycodeDecoder> {
     fn new() -> Decoder<PunycodeDecoder> {
         Decoder {
-            name: "Punycode",
-            description: "Punycode is a representation of Unicode with the limited ASCII character subset used for Internet hostnames.",
+            name: "Punycode", description: "Punycode is a representation of Unicode with the limited ASCII character subset used for Internet hostnames.",
             link: "https://en.wikipedia.org/wiki/Punycode",
             tags: vec!["punycode", "idna", "decoder", "dns"],
             popularity: 0.4,
@@ -26,7 +26,7 @@ impl Crack for Decoder<PunycodeDecoder> {
         }
     }
 
-    fn crack(&self, text: &str, checker: &CheckerTypes) -> CrackResult {
+    fn crack(&self, text: &str, checker: &CheckerTypes, config: &Config) -> CrackResult {
         trace!("Trying Punycode with text {:?}", text);
         let mut results = CrackResult::new(self, text.to_string());
 
@@ -41,7 +41,7 @@ impl Crack for Decoder<PunycodeDecoder> {
              return results;
         }
 
-        let checker_result = checker.check(&decoded_text);
+        let checker_result = checker.check(&decoded_text, config);
         results.unencrypted_text = Some(vec![decoded_text]);
         results.update_checker(&checker_result);
 
@@ -92,14 +92,14 @@ mod tests {
     fn punycode_mnchen() {
         // München -> Mnchen-3ya
         let decoder = Decoder::<PunycodeDecoder>::new();
-        let result = decoder.crack("Mnchen-3ya", &get_checker());
+        let result = decoder.crack("Mnchen-3ya", &get_checker(), &crate::config::Config::default());
         assert_eq!(result.unencrypted_text.unwrap()[0], "München");
     }
 
     #[test]
     fn punycode_with_prefix() {
         let decoder = Decoder::<PunycodeDecoder>::new();
-        let result = decoder.crack("xn--Mnchen-3ya", &get_checker());
+        let result = decoder.crack("xn--Mnchen-3ya", &get_checker(), &crate::config::Config::default());
         assert_eq!(result.unencrypted_text.unwrap()[0], "München");
     }
 }

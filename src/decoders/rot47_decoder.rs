@@ -5,6 +5,7 @@
 //! Uses Low sensitivity for gibberish detection.
 
 use crate::checkers::CheckerTypes;
+use crate::config::Config;
 use crate::decoders::interface::check_string_success;
 use gibberish_or_not::Sensitivity;
 
@@ -31,7 +32,7 @@ impl Crack for Decoder<ROT47Decoder> {
     /// This function does the actual decoding
     /// It returns an Option<string> if it was successful
     /// Else the Option returns nothing and the error is logged in Trace
-    fn crack(&self, text: &str, checker: &CheckerTypes) -> CrackResult {
+    fn crack(&self, text: &str, checker: &CheckerTypes, config: &Config) -> CrackResult {
         trace!("Trying rot47 with text {:?}", text);
         let mut results = CrackResult::new(self, text.to_string());
         let mut decoded_strings = Vec::new();
@@ -51,7 +52,7 @@ impl Crack for Decoder<ROT47Decoder> {
                 );
                 return results;
             }
-            let checker_result = checker_with_sensitivity.check(borrowed_decoded_text);
+            let checker_result = checker_with_sensitivity.check(borrowed_decoded_text, config);
             // If checkers return true, exit early with the correct result
             if checker_result.is_identified {
                 trace!("Found a match with rot47 shift {}", shift);
@@ -132,7 +133,7 @@ mod tests {
             println!("Shift: {}, Result: {:?}", shift, decoded);
         }
 
-        let result = rot47_decoder.crack(input, &get_athena_checker());
+        let result = rot47_decoder.crack(input, &get_athena_checker(), &crate::config::Config::default());
 
         if let Some(decoded_texts) = &result.unencrypted_text {
             println!("Number of decoded texts: {}", decoded_texts.len());
@@ -157,7 +158,7 @@ mod tests {
         // It should return None
         let rot47_decoder = Decoder::<ROT47Decoder>::new();
         let result = rot47_decoder
-            .crack("", &get_athena_checker())
+            .crack("", &get_athena_checker(), &crate::config::Config::default())
             .unencrypted_text;
         assert!(result.is_none());
     }
@@ -173,8 +174,7 @@ mod tests {
         // We'll use the actual implementation but check that it calls with_sensitivity
         // with Low sensitivity
         let result = rot47_decoder.crack(
-            text,
-            &CheckerTypes::CheckEnglish(Checker::<EnglishChecker>::new()),
+            text, &CheckerTypes::CheckEnglish(Checker::<EnglishChecker>::new()), &crate::config::Config::default(),
         );
 
         // Verify that the implementation is using Low sensitivity by checking the code

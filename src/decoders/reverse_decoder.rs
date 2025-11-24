@@ -4,6 +4,7 @@
 //! `result.is_some()` to see if it returned okay.
 
 use crate::checkers::CheckerTypes;
+use crate::config::Config;
 
 use super::crack_results::CrackResult;
 use super::interface::Crack;
@@ -14,14 +15,14 @@ use log::trace;
 /// ```rust
 /// use ares::decoders::reverse_decoder::ReverseDecoder;
 /// use ares::decoders::interface::{Crack, Decoder};
-/// use ares::config::{set_global_config, Config};
+/// use ares::config::Config;
 /// use ares::checkers::{athena::Athena, CheckerTypes, checker_type::{Check, Checker}};
 ///
 /// let reversedecoder = Decoder::<ReverseDecoder>::new();
 /// let athena_checker = Checker::<Athena>::new();
 /// let checker = CheckerTypes::CheckAthena(athena_checker);
 ///
-/// let result = reversedecoder.crack("stac", &checker).unencrypted_text;
+/// let result = reversedecoder.crack("stac", &checker, &ares::config::Config::default()).unencrypted_text;
 /// assert!(result.is_some());
 /// assert_eq!(result.unwrap()[0], "cats");
 /// ```
@@ -44,14 +45,14 @@ impl Crack for Decoder<ReverseDecoder> {
     /// This function does the actual decoding
     /// It returns an Option<string> if it was successful
     /// Else the Option returns nothing and the error is logged in Trace
-    fn crack(&self, text: &str, checker: &CheckerTypes) -> CrackResult {
+    fn crack(&self, text: &str, checker: &CheckerTypes, config: &Config) -> CrackResult {
         trace!("Running reverse string");
         let mut result = CrackResult::new(self, text.to_string());
         if text.is_empty() {
             return result;
         }
         let rev_str: String = text.chars().rev().collect();
-        let checker_res = checker.check(&rev_str);
+        let checker_res = checker.check(&rev_str, config);
 
         result.unencrypted_text = Some(vec![rev_str]);
         result.update_checker(&checker_res);
@@ -96,7 +97,7 @@ mod tests {
     fn returns_success() {
         let reverse_decoder = Decoder::<ReverseDecoder>::new();
         let result = reverse_decoder
-            .crack("stac", &get_athena_checker())
+            .crack("stac", &get_athena_checker(), &crate::config::Config::default())
             .unencrypted_text
             .expect("No unencrypted string for reverse decoder");
         assert_eq!(result[0], "cats");
@@ -106,7 +107,7 @@ mod tests {
     fn returns_nothing() {
         let reverse_decoder = Decoder::<ReverseDecoder>::new();
         let result = reverse_decoder
-            .crack("", &get_athena_checker())
+            .crack("", &get_athena_checker(), &crate::config::Config::default())
             .unencrypted_text;
         assert!(result.is_none());
     }

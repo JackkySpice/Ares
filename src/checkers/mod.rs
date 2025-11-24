@@ -10,6 +10,7 @@ use self::{
     wordlist::WordlistChecker,
 };
 
+use crate::config::Config;
 use gibberish_or_not::Sensitivity;
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
@@ -57,15 +58,15 @@ pub enum CheckerTypes {
 
 impl CheckerTypes {
     /// This functions calls appropriate check function of Checker
-    pub fn check(&self, text: &str) -> CheckResult {
+    pub fn check(&self, text: &str, config: &Config) -> CheckResult {
         match self {
-            CheckerTypes::CheckLemmeKnow(lemmeknow_checker) => lemmeknow_checker.check(text),
-            CheckerTypes::CheckEnglish(english_checker) => english_checker.check(text),
-            CheckerTypes::CheckAthena(athena_checker) => athena_checker.check(text),
-            CheckerTypes::CheckWaitAthena(wait_athena_checker) => wait_athena_checker.check(text),
-            CheckerTypes::CheckRegex(regex_checker) => regex_checker.check(text),
-            CheckerTypes::CheckPassword(password_checker) => password_checker.check(text),
-            CheckerTypes::CheckWordlist(wordlist_checker) => wordlist_checker.check(text),
+            CheckerTypes::CheckLemmeKnow(lemmeknow_checker) => lemmeknow_checker.check(text, config),
+            CheckerTypes::CheckEnglish(english_checker) => english_checker.check(text, config),
+            CheckerTypes::CheckAthena(athena_checker) => athena_checker.check(text, config),
+            CheckerTypes::CheckWaitAthena(wait_athena_checker) => wait_athena_checker.check(text, config),
+            CheckerTypes::CheckRegex(regex_checker) => regex_checker.check(text, config),
+            CheckerTypes::CheckPassword(password_checker) => password_checker.check(text, config),
+            CheckerTypes::CheckWordlist(wordlist_checker) => wordlist_checker.check(text, config),
         }
     }
 
@@ -192,12 +193,14 @@ mod tests {
     #[test]
     fn test_check_ip_address() {
         let athena = CheckerTypes::CheckAthena(Checker::<Athena>::new());
-        assert!(athena.check("test valid english sentence").is_identified);
+        let config = crate::config::Config::default();
+        assert!(athena.check("test valid english sentence", &config).is_identified);
     }
 
     #[test]
     fn test_check_goes_to_dictionary() {
         let athena = CheckerTypes::CheckAthena(Checker::<Athena>::new());
-        assert!(athena.check("exuberant").is_identified);
+        let config = crate::config::Config::default();
+        assert!(athena.check("exuberant", &config).is_identified);
     }
 }

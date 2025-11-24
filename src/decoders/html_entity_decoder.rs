@@ -2,6 +2,7 @@
 //! Performs error handling and returns a string
 
 use crate::checkers::CheckerTypes;
+use crate::config::Config;
 use crate::decoders::interface::check_string_success;
 use crate::decoders::crack_results::CrackResult;
 use crate::decoders::interface::Crack;
@@ -18,8 +19,7 @@ pub struct HtmlEntityDecoder;
 impl Crack for Decoder<HtmlEntityDecoder> {
     fn new() -> Decoder<HtmlEntityDecoder> {
         Decoder {
-            name: "HTML Entity",
-            description: "HTML entities are used to display reserved characters in HTML. This decoder converts them back to characters.",
+            name: "HTML Entity", description: "HTML entities are used to display reserved characters in HTML. This decoder converts them back to characters.",
             link: "https://en.wikipedia.org/wiki/HTML_entity",
             tags: vec!["html", "entity", "decoder", "web"],
             popularity: 0.8,
@@ -27,7 +27,7 @@ impl Crack for Decoder<HtmlEntityDecoder> {
         }
     }
 
-    fn crack(&self, text: &str, checker: &CheckerTypes) -> CrackResult {
+    fn crack(&self, text: &str, checker: &CheckerTypes, config: &Config) -> CrackResult {
         trace!("Trying HTML Entity with text {:?}", text);
         let mut results = CrackResult::new(self, text.to_string());
 
@@ -40,7 +40,7 @@ impl Crack for Decoder<HtmlEntityDecoder> {
              return results;
         }
 
-        let checker_result = checker.check(&decoded_text);
+        let checker_result = checker.check(&decoded_text, config);
         results.unencrypted_text = Some(vec![decoded_text]);
         results.update_checker(&checker_result);
 
@@ -69,28 +69,28 @@ mod tests {
     #[test]
     fn html_basic() {
         let decoder = Decoder::<HtmlEntityDecoder>::new();
-        let result = decoder.crack("&lt;Hello&gt;", &get_checker());
+        let result = decoder.crack("&lt;Hello&gt;", &get_checker(), &crate::config::Config::default());
         assert_eq!(result.unencrypted_text.unwrap()[0], "<Hello>");
     }
 
     #[test]
     fn html_hex() {
         let decoder = Decoder::<HtmlEntityDecoder>::new();
-        let result = decoder.crack("&#x41;", &get_checker());
+        let result = decoder.crack("&#x41;", &get_checker(), &crate::config::Config::default());
         assert_eq!(result.unencrypted_text.unwrap()[0], "A");
     }
 
     #[test]
     fn html_decimal() {
         let decoder = Decoder::<HtmlEntityDecoder>::new();
-        let result = decoder.crack("&#65;", &get_checker());
+        let result = decoder.crack("&#65;", &get_checker(), &crate::config::Config::default());
         assert_eq!(result.unencrypted_text.unwrap()[0], "A");
     }
 
     #[test]
     fn html_no_change() {
         let decoder = Decoder::<HtmlEntityDecoder>::new();
-        let result = decoder.crack("Hello", &get_checker());
+        let result = decoder.crack("Hello", &get_checker(), &crate::config::Config::default());
         assert!(result.unencrypted_text.is_none());
     }
 }

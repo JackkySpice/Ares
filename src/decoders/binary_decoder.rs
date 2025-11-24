@@ -1,4 +1,5 @@
 use crate::checkers::CheckerTypes;
+use crate::config::Config;
 use crate::decoders::interface::check_string_success;
 
 use super::crack_results::CrackResult;
@@ -25,7 +26,7 @@ impl Crack for Decoder<BinaryDecoder> {
     /// This function does the actual decoding
     /// It returns an Option<string> if it was successful
     /// Else the Option returns nothing and the error is logged in Trace
-    fn crack(&self, text: &str, checker: &CheckerTypes) -> CrackResult {
+    fn crack(&self, text: &str, checker: &CheckerTypes, config: &Config) -> CrackResult {
         trace!("Trying binary with text {:?}", text);
         let mut results = CrackResult::new(self, text.to_string());
         let mut decoded_strings = Vec::new();
@@ -42,7 +43,7 @@ impl Crack for Decoder<BinaryDecoder> {
                 );
                 return results;
             }
-            let checker_result = checker.check(borrowed_decoded_text);
+            let checker_result = checker.check(borrowed_decoded_text, config);
             // If checkers return true, exit early with the correct result
             if checker_result.is_identified {
                 info!("Found a match with binary bit {}", shift);
@@ -140,7 +141,7 @@ mod tests {
             input.chars().filter(|c| *c != '0' && *c != '1').collect();
         println!("Non-binary characters in input: {:?}", non_binary_chars);
 
-        let result = decoder.crack(input, &get_athena_checker());
+        let result = decoder.crack(input, &get_athena_checker(), &crate::config::Config::default());
 
         if let Some(decoded_texts) = &result.unencrypted_text {
             println!("Number of decoded texts: {}", decoded_texts.len());
@@ -163,7 +164,7 @@ mod tests {
     fn binary_bit_8_decodes_successfully() {
         // This tests if Binary can decode Binary bit 8 successfully
         let decoder = Decoder::<BinaryDecoder>::new();
-        let result = decoder.crack("0110100001100101011011000110110001101111001000000111011101101111011100100110110001100100", &get_athena_checker());
+        let result = decoder.crack("0110100001100101011011000110110001101111001000000111011101101111011100100110110001100100", &get_athena_checker(), &crate::config::Config::default());
         assert_eq!(result.unencrypted_text.unwrap()[0], "hello world");
     }
 
@@ -171,7 +172,7 @@ mod tests {
     fn binary_bit_12_with_delimiters_decodes_successfully() {
         // This tests if Binary can decode Binary bit 12 with delimiters successfully
         let decoder = Decoder::<BinaryDecoder>::new();
-        let result = decoder.crack("000001101000;000001110100;000001110100;000001110000;000001110011;000000111010;000000101111;000000101111;000001110111;000001110111;000001110111;000000101110;000001100111;000001101111;000001101111;000001100111;000001101100;000001100101;000000101110;000001100011;000001101111;000001101101", &get_athena_checker());
+        let result = decoder.crack("000001101000;000001110100;000001110100;000001110000;000001110011;000000111010;000000101111;000000101111;000001110111;000001110111;000001110111;000000101110;000001100111;000001101111;000001101111;000001100111;000001101100;000001100101;000000101110;000001100011;000001101111;000001101101", &get_athena_checker(), &crate::config::Config::default());
         assert_eq!(
             result.unencrypted_text.unwrap()[0],
             "https://www.google.com"
@@ -182,7 +183,7 @@ mod tests {
     fn binary_bit_15_with_a_lot_of_delimiters_decodes_successfully() {
         // This tests if Binary can decode Binary bit 15 with a lot of delimiters successfully
         let decoder = Decoder::<BinaryDecoder>::new();
-        let result = decoder.crack(r"000+00\0001\010||100;00[000]00{}011'010'00;0'000:000:0110:10;01;0.00.000.001.11.00.11;000 ,000,000,1 00,000;0$00 0$000 0$1101$001;0!00 !00000!1 1100!1 1;000`000`000`100~000;00~000-00=0110_0011;00\\000\00\/011/0111/1 ;00?000<>000}110{11150;09008goodluck003005011h10110;00,00m00b0011f0s11f11;0h00j0r00c001t1011*00;00* 000%00011#101301;0070040 08001-1101=00;000_0 0.0001,100 .101;00090006 00113001 ~00;00d00-0 000-0101=110", &get_athena_checker());
+        let result = decoder.crack(r"000+00\0001\010||100;00[000]00{}011'010'00;0'000:000:0110:10;01;0.00.000.001.11.00.11;000 , 000,000,1 00,000;0$00 0$000 0$1101$001;0!00 !00000!1 1100!1 1;000`000`000`100~000;00~000-00=0110_0011;00\\000\00\/011/0111/1 ;00?000<>000}110{11150;09008goodluck003005011h10110;00,00m00b0011f0s11f11;0h00j0r00c001t1011*00;00* 000%00011#101301;0070040 08001-1101=00;000_0 0.0001,100 .101;00090006 00113001 ~00;00d00-0 000-0101=110", &get_athena_checker(), &crate::config::Config::default());
         assert_eq!(result.unencrypted_text.unwrap()[0], "This is convoluted.");
     }
 
@@ -193,9 +194,7 @@ mod tests {
         let binary_decoder = Decoder::<BinaryDecoder>::new();
         let result = binary_decoder
             .crack(
-                "hello my name is panicky mc panic face!",
-                &get_athena_checker(),
-            )
+                "hello my name is panicky mc panic face!", &get_athena_checker(), &crate::config::Config::default())
             .unencrypted_text;
         assert!(result.is_none());
     }
@@ -206,7 +205,7 @@ mod tests {
         // It should return None
         let citrix_ctx1_decoder = Decoder::<BinaryDecoder>::new();
         let result = citrix_ctx1_decoder
-            .crack("", &get_athena_checker())
+            .crack("", &get_athena_checker(), &crate::config::Config::default())
             .unencrypted_text;
         assert!(result.is_none());
     }
@@ -217,7 +216,7 @@ mod tests {
         // It should return None
         let base64_url_decoder = Decoder::<BinaryDecoder>::new();
         let result = base64_url_decoder
-            .crack("😂", &get_athena_checker())
+            .crack("😂", &get_athena_checker(), &crate::config::Config::default())
             .unencrypted_text;
         assert!(result.is_none());
     }

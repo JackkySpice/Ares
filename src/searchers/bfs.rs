@@ -8,11 +8,12 @@ use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 
 use crate::DecoderResult;
+use crate::config::Config;
 
 /// Breadth first search is our search algorithm
 /// https://en.wikipedia.org/wiki/Breadth-first_search
 #[allow(dead_code)]
-pub fn bfs(input: String, result_sender: Sender<Option<DecoderResult>>, stop: Arc<AtomicBool>) {
+pub fn bfs(input: String, result_sender: Sender<Option<DecoderResult>>, stop: Arc<AtomicBool>, config: Arc<crate::config::Config>) {
     let initial = DecoderResult {
         text: vec![input],
         path: vec![],
@@ -31,7 +32,7 @@ pub fn bfs(input: String, result_sender: Sender<Option<DecoderResult>>, stop: Ar
         let mut new_strings: Vec<DecoderResult> = vec![];
 
         current_strings.into_iter().try_for_each(|current_string| {
-            let res = super::perform_decoding(&current_string);
+            let res = super::perform_decoding(&current_string, &config);
 
             match res {
                 // if it's Break variant, we have cracked the text successfully
@@ -45,7 +46,7 @@ pub fn bfs(input: String, result_sender: Sender<Option<DecoderResult>>, stop: Ar
                         path: decoders_used,
                     };
 
-                    decoded_how_many_times(curr_depth);
+                    decoded_how_many_times(curr_depth, &config);
                     result_sender
                         .send(Some(result_text))
                         .expect("Should succesfully send the result");
@@ -109,7 +110,7 @@ mod tests {
         // this will work after english checker can identify "CANARY: hello"
         let (tx, rx) = bounded::<Option<DecoderResult>>(1);
         let stopper = Arc::new(AtomicBool::new(false));
-        bfs("b2xsZWg=".into(), tx, stopper);
+        bfs("b2xsZWg=".into(), tx, stopper, std::sync::Arc::new(crate::config::Config::default()));
         let result = rx.recv().unwrap();
         assert!(result.is_some());
     }
@@ -129,7 +130,7 @@ mod tests {
         // Caesar Cipher (Rot13) -> Base64
         let (tx, rx) = bounded::<Option<DecoderResult>>(1);
         let stopper = Arc::new(AtomicBool::new(false));
-        bfs("MTkyLjE2OC4wLjE=".into(), tx, stopper);
+        bfs("MTkyLjE2OC4wLjE=".into(), tx, stopper, std::sync::Arc::new(crate::config::Config::default()));
         let result = rx.recv().unwrap();
         assert!(result.is_some());
         assert_eq!(result.unwrap().text[0], "192.168.0.1");

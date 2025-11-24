@@ -1,4 +1,5 @@
 use crate::checkers::CheckerTypes;
+use crate::config::Config;
 
 use super::crack_results::CrackResult;
 
@@ -44,7 +45,7 @@ impl Crack for Decoder<DefaultDecoder> {
         Decoder::default()
     }
     /// Returns a dummy CrackResult
-    fn crack(&self, text: &str, _checker: &CheckerTypes) -> CrackResult {
+    fn crack(&self, text: &str, _checker: &CheckerTypes, _config: &Config) -> CrackResult {
         CrackResult::new(self, text.to_string())
     }
     /// Gets all tags for this decoder
@@ -75,7 +76,7 @@ pub trait Crack {
     where
         Self: Sized;
     /// Crack is the function that actually does the decoding
-    fn crack(&self, text: &str, checker: &CheckerTypes) -> CrackResult;
+    fn crack(&self, text: &str, checker: &CheckerTypes, config: &Config) -> CrackResult;
     /// Get all tags for the current decoder
     fn get_tags(&self) -> &Vec<&str>;
     /// Get the name of the current decoder

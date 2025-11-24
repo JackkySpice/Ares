@@ -3,6 +3,7 @@
 //! Brute forces all possible keys.
 
 use crate::checkers::CheckerTypes;
+use crate::config::Config;
 use crate::decoders::interface::check_string_success;
 use crate::decoders::crack_results::CrackResult;
 use crate::decoders::interface::Crack;
@@ -19,8 +20,7 @@ pub struct AffineCipherDecoder;
 impl Crack for Decoder<AffineCipherDecoder> {
     fn new() -> Decoder<AffineCipherDecoder> {
         Decoder {
-            name: "Affine Cipher",
-            description: "The Affine cipher is a type of monoalphabetic substitution cipher. It uses a mathematical function E(x) = (ax + b) mod 26.",
+            name: "Affine Cipher", description: "The Affine cipher is a type of monoalphabetic substitution cipher. It uses a mathematical function E(x, &crate::config::Config::default()) = (ax + b) mod 26.",
             link: "https://en.wikipedia.org/wiki/Affine_cipher",
             tags: vec!["affine", "substitution", "decoder", "classic"],
             popularity: 0.5,
@@ -28,7 +28,7 @@ impl Crack for Decoder<AffineCipherDecoder> {
         }
     }
 
-    fn crack(&self, text: &str, checker: &CheckerTypes) -> CrackResult {
+    fn crack(&self, text: &str, checker: &CheckerTypes, config: &Config) -> CrackResult {
         trace!("Trying Affine Cipher with text {:?}", text);
         let mut results = CrackResult::new(self, text.to_string());
 
@@ -51,7 +51,7 @@ impl Crack for Decoder<AffineCipherDecoder> {
                 let decoded = decrypt_affine(text, a_inv, b);
                 if check_string_success(&decoded, text) {
                      // Check if it looks like English
-                     let check_res = checker_with_sensitivity.check(&decoded);
+                     let check_res = checker_with_sensitivity.check(&decoded, config);
                      if check_res.is_identified {
                          best_candidates.push(decoded);
                          // If we find a very good match, maybe stop? But short strings might match multiple.
@@ -63,7 +63,7 @@ impl Crack for Decoder<AffineCipherDecoder> {
 
         if !best_candidates.is_empty() {
              // Use first one for update_checker but return all?
-             let checker_result = checker.check(&best_candidates[0]);
+             let checker_result = checker.check(&best_candidates[0], config);
              results.unencrypted_text = Some(best_candidates);
              results.update_checker(&checker_result);
         }
@@ -112,7 +112,7 @@ mod tests {
         // F(5) -> 5*5+8 = 33 -> 7(H).
         // ... "IHHWVC SWFRCP"
         let decoder = Decoder::<AffineCipherDecoder>::new();
-        let result = decoder.crack("IHHWVC SWFRCP", &get_checker());
+        let result = decoder.crack("IHHWVC SWFRCP", &get_checker(), &crate::config::Config::default());
         assert!(result.unencrypted_text.is_some());
         assert!(result.unencrypted_text.unwrap().contains(&"AFFINE CIPHER".to_string()));
     }

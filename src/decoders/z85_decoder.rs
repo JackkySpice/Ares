@@ -3,6 +3,7 @@
 //! Call z85_decoder.crack to use. It returns option<String> and check with
 //! `result.is_some()` to see if it returned okay.
 use crate::checkers::CheckerTypes;
+use crate::config::Config;
 use crate::decoders::interface::check_string_success;
 use z85;
 
@@ -26,7 +27,7 @@ use log::{debug, info, trace};
 /// let athena_checker = Checker::<Athena>::new();
 /// let checker = CheckerTypes::CheckAthena(athena_checker);
 ///
-/// let result = decode_z85.crack("nm=QNzY&b1A+]nf", &checker).unencrypted_text;
+/// let result = decode_z85.crack("nm=QNzY&b1A+]nf", &checker, &ares::config::Config::default()).unencrypted_text;
 /// assert!(result.is_some());
 /// assert_eq!(result.unwrap()[0], "Hello World!");
 /// ```
@@ -47,7 +48,7 @@ impl Crack for Decoder<Z85Decoder> {
     /// This function does the actual decoding
     /// It returns an Option<string> if it was successful
     /// Else the Option returns nothing and the error is logged in Trace
-    fn crack(&self, text: &str, checker: &CheckerTypes) -> CrackResult {
+    fn crack(&self, text: &str, checker: &CheckerTypes, config: &Config) -> CrackResult {
         trace!("Trying Z85 with text {:?}", text);
         let decoded_text = decode_z85_no_error_handling(text);
         let mut results = CrackResult::new(self, text.to_string());
@@ -66,7 +67,7 @@ impl Crack for Decoder<Z85Decoder> {
             return results;
         }
 
-        let checker_result = checker.check(&decoded_text);
+        let checker_result = checker.check(&decoded_text, config);
         results.unencrypted_text = Some(vec![decoded_text]);
 
         results.update_checker(&checker_result);
@@ -121,7 +122,7 @@ mod tests {
     #[test]
     fn z85_successful_decoding() {
         let z85_decoder = Decoder::<Z85Decoder>::new();
-        let result = z85_decoder.crack("nm=QNzY&b1A+]nf", &get_athena_checker());
+        let result = z85_decoder.crack("nm=QNzY&b1A+]nf", &get_athena_checker(), &crate::config::Config::default());
         assert_eq!(result.unencrypted_text.unwrap()[0], "Hello World!");
     }
 
@@ -134,7 +135,7 @@ mod tests {
         // https://gchq.github.io/CyberChef/#recipe=From_Base85('0-9a-zA-Z.%5C%5C-:%2B%3D%5E!/*?%26%3C%3E()%5B%5D%7B%7D@%25$%23',true,'')&input=ODdjVVJEXWouOEFURD8
         let z85_decoder = Decoder::<Z85Decoder>::new();
         let result = z85_decoder
-            .crack("87cURD]j.8ATD?*", &get_athena_checker())
+            .crack("87cURD]j.8ATD?*", &get_athena_checker(), &crate::config::Config::default())
             .unencrypted_text;
         if result.is_some() {
             assert_eq!(true, true);
@@ -147,7 +148,7 @@ mod tests {
         // but returns False on check_string_success
         let z85_decoder = Decoder::<Z85Decoder>::new();
         let result = z85_decoder
-            .crack("", &get_athena_checker())
+            .crack("", &get_athena_checker(), &crate::config::Config::default())
             .unencrypted_text;
         assert!(result.is_none());
     }
@@ -158,7 +159,7 @@ mod tests {
         // This should fail to decode
         let z85_decoder = Decoder::<Z85Decoder>::new();
         let result = z85_decoder
-            .crack("12ab", &get_athena_checker())
+            .crack("12ab", &get_athena_checker(), &crate::config::Config::default())
             .unencrypted_text;
         assert!(result.is_none());
     }
@@ -168,9 +169,7 @@ mod tests {
         let z85_decoder = Decoder::<Z85Decoder>::new();
         let result = z85_decoder
             .crack(
-                "hello my name is panicky mc panic face!",
-                &get_athena_checker(),
-            )
+                "hello my name is panicky mc panic face!", &get_athena_checker(), &crate::config::Config::default())
             .unencrypted_text;
         assert!(result.is_none());
     }
@@ -179,7 +178,7 @@ mod tests {
     fn z85_handle_panic_if_empty_string() {
         let z85_decoder = Decoder::<Z85Decoder>::new();
         let result = z85_decoder
-            .crack("", &get_athena_checker())
+            .crack("", &get_athena_checker(), &crate::config::Config::default())
             .unencrypted_text;
         assert!(result.is_none());
     }
@@ -188,7 +187,7 @@ mod tests {
     fn z85_handle_panic_if_emoji() {
         let z85_decoder = Decoder::<Z85Decoder>::new();
         let result = z85_decoder
-            .crack("😂", &get_athena_checker())
+            .crack("😂", &get_athena_checker(), &crate::config::Config::default())
             .unencrypted_text;
         assert!(result.is_none());
     }

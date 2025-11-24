@@ -4,6 +4,7 @@
 //! `result.is_some()` to see if it returned okay.
 
 use crate::checkers::CheckerTypes;
+use crate::config::Config;
 use crate::decoders::interface::check_string_success;
 
 use super::crack_results::CrackResult;
@@ -26,7 +27,7 @@ use log::{debug, info, trace};
 /// let athena_checker = Checker::<Athena>::new();
 /// let checker = CheckerTypes::CheckAthena(athena_checker);
 ///
-/// let result = decode_base65536.crack("𒅓鹨𖡮𒀠啦ꍢ顡啫𓍱𓁡𠁴唬𓍪鱤啥𖥭𔐠𔕯ᔮ", &checker).unencrypted_text;
+/// let result = decode_base65536.crack("𒅓鹨𖡮𒀠啦ꍢ顡啫𓍱𓁡𠁴唬𓍪鱤啥𖥭𔐠𔕯ᔮ", &checker, &ares::config::Config::default()).unencrypted_text;
 /// assert!(result.is_some());
 /// assert_eq!(result.unwrap()[0], "Sphinx of black quartz, judge my vow.");
 /// ```
@@ -47,7 +48,7 @@ impl Crack for Decoder<Base65536Decoder> {
     /// This function does the actual decoding
     /// It returns an Option<string> if it was successful
     /// Else the Option returns nothing and the error is logged in Trace
-    fn crack(&self, text: &str, checker: &CheckerTypes) -> CrackResult {
+    fn crack(&self, text: &str, checker: &CheckerTypes, config: &Config) -> CrackResult {
         trace!("Trying base65536 with text {:?}", text);
         let decoded_text: Option<String> = decode_base65536_no_error_handling(text);
 
@@ -68,7 +69,7 @@ impl Crack for Decoder<Base65536Decoder> {
             return results;
         }
 
-        let checker_result = checker.check(&decoded_text);
+        let checker_result = checker.check(&decoded_text, config);
         results.unencrypted_text = Some(vec![decoded_text]);
 
         results.update_checker(&checker_result);
@@ -125,7 +126,7 @@ mod tests {
     fn base65536_decodes_successfully() {
         // This tests if Base65536 can decode Base65536 successfully
         let base65536_decoder = Decoder::<Base65536Decoder>::new();
-        let result = base65536_decoder.crack("𒅓鹨𖡮𒀠啦ꍢ顡啫𓍱𓁡𠁴唬𓍪鱤啥𖥭𔐠𔕯ᔮ", &get_athena_checker());
+        let result = base65536_decoder.crack("𒅓鹨𖡮𒀠啦ꍢ顡啫𓍱𓁡𠁴唬𓍪鱤啥𖥭𔐠𔕯ᔮ", &get_athena_checker(), &crate::config::Config::default());
         assert_eq!(
             result.unencrypted_text.unwrap()[0],
             "Sphinx of black quartz, judge my vow."
@@ -139,9 +140,7 @@ mod tests {
         let base65536_decoder = Decoder::<Base65536Decoder>::new();
         let result = base65536_decoder
             .crack(
-                "hello my name is panicky mc panic face!",
-                &get_athena_checker(),
-            )
+                "hello my name is panicky mc panic face!", &get_athena_checker(), &crate::config::Config::default())
             .unencrypted_text;
         assert!(result.is_none());
     }
@@ -152,7 +151,7 @@ mod tests {
         // It should return None
         let base65536_decoder = Decoder::<Base65536Decoder>::new();
         let result = base65536_decoder
-            .crack("", &get_athena_checker())
+            .crack("", &get_athena_checker(), &crate::config::Config::default())
             .unencrypted_text;
         assert!(result.is_none());
     }
@@ -163,7 +162,7 @@ mod tests {
         // It should return None
         let base65536_decoder = Decoder::<Base65536Decoder>::new();
         let result = base65536_decoder
-            .crack("😂", &get_athena_checker())
+            .crack("😂", &get_athena_checker(), &crate::config::Config::default())
             .unencrypted_text;
         assert!(result.is_none());
     }

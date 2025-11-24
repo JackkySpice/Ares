@@ -2,6 +2,7 @@
 //! Performs error handling and returns a string
 
 use crate::checkers::CheckerTypes;
+use crate::config::Config;
 use crate::decoders::interface::check_string_success;
 use crate::decoders::crack_results::CrackResult;
 use crate::decoders::interface::Crack;
@@ -18,8 +19,7 @@ pub struct DecimalDecoder;
 impl Crack for Decoder<DecimalDecoder> {
     fn new() -> Decoder<DecimalDecoder> {
         Decoder {
-            name: "Decimal",
-            description: "Decimal is a base-10 number system. This decoder converts space-separated decimal values to ASCII text.",
+            name: "Decimal", description: "Decimal is a base-10 number system. This decoder converts space-separated decimal values to ASCII text.",
             link: "https://en.wikipedia.org/wiki/Decimal",
             tags: vec!["decimal", "base10", "decoder", "numeric"],
             popularity: 0.5,
@@ -27,7 +27,7 @@ impl Crack for Decoder<DecimalDecoder> {
         }
     }
 
-    fn crack(&self, text: &str, checker: &CheckerTypes) -> CrackResult {
+    fn crack(&self, text: &str, checker: &CheckerTypes, config: &Config) -> CrackResult {
         trace!("Trying Decimal with text {:?}", text);
         let mut results = CrackResult::new(self, text.to_string());
         let decoded_text = decode_decimal_no_error_handling(text);
@@ -43,7 +43,7 @@ impl Crack for Decoder<DecimalDecoder> {
             return results;
         }
 
-        let checker_result = checker.check(&decoded_text);
+        let checker_result = checker.check(&decoded_text, config);
         results.unencrypted_text = Some(vec![decoded_text]);
         results.update_checker(&checker_result);
 
@@ -100,21 +100,21 @@ mod tests {
     fn decimal_hello() {
         // "Hello" -> 72 101 108 108 111
         let decoder = Decoder::<DecimalDecoder>::new();
-        let result = decoder.crack("72 101 108 108 111", &get_checker());
+        let result = decoder.crack("72 101 108 108 111", &get_checker(), &crate::config::Config::default());
         assert_eq!(result.unencrypted_text.unwrap()[0], "Hello");
     }
 
     #[test]
     fn decimal_invalid() {
         let decoder = Decoder::<DecimalDecoder>::new();
-        let result = decoder.crack("256 100", &get_checker()); // 256 overflow u8
+        let result = decoder.crack("256 100", &get_checker(), &crate::config::Config::default()); // 256 overflow u8
         assert!(result.unencrypted_text.is_none());
     }
 
     #[test]
     fn decimal_single() {
         let decoder = Decoder::<DecimalDecoder>::new();
-        let result = decoder.crack("65", &get_checker());
+        let result = decoder.crack("65", &get_checker(), &crate::config::Config::default());
         assert_eq!(result.unencrypted_text.unwrap()[0], "A");
     }
 }

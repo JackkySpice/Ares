@@ -2,6 +2,7 @@
 //! Performs error handling and returns a string
 
 use crate::checkers::CheckerTypes;
+use crate::config::Config;
 use crate::decoders::interface::check_string_success;
 use crate::decoders::crack_results::CrackResult;
 use crate::decoders::interface::Crack;
@@ -19,8 +20,7 @@ pub struct Base32HexDecoder;
 impl Crack for Decoder<Base32HexDecoder> {
     fn new() -> Decoder<Base32HexDecoder> {
         Decoder {
-            name: "Base32Hex",
-            description: "Base32Hex is a variant of Base32 that uses the characters 0-9 and A-V. It is also known as Base32 Extended Hex.",
+            name: "Base32Hex", description: "Base32Hex is a variant of Base32 that uses the characters 0-9 and A-V. It is also known as Base32 Extended Hex.",
             link: "https://en.wikipedia.org/wiki/Base32#base32hex",
             tags: vec!["base32hex", "base32", "decoder", "base"],
             popularity: 0.7,
@@ -28,7 +28,7 @@ impl Crack for Decoder<Base32HexDecoder> {
         }
     }
 
-    fn crack(&self, text: &str, checker: &CheckerTypes) -> CrackResult {
+    fn crack(&self, text: &str, checker: &CheckerTypes, config: &Config) -> CrackResult {
         trace!("Trying Base32Hex with text {:?}", text);
         let mut results = CrackResult::new(self, text.to_string());
 
@@ -36,7 +36,7 @@ impl Crack for Decoder<Base32HexDecoder> {
         if let Ok(decoded_bytes) = BASE32HEX_NOPAD.decode(text_no_pad.as_bytes()) {
              if let Ok(decoded) = String::from_utf8(decoded_bytes) {
                   if check_string_success(&decoded, text) {
-                      let checker_result = checker.check(&decoded);
+                      let checker_result = checker.check(&decoded, config);
                       results.unencrypted_text = Some(vec![decoded]);
                       results.update_checker(&checker_result);
                   }
@@ -74,14 +74,14 @@ mod tests {
         // J (9) -> 9. B (1) -> 1. S (18) -> I. W (22) -> M. Y (24) -> O. 3 (27) -> R. D (3) -> 3. P (15) -> F.
         // So "Hello" in Base32Hex is "91IMOR3F"
         let decoder = Decoder::<Base32HexDecoder>::new();
-        let result = decoder.crack("91IMOR3F", &get_checker());
+        let result = decoder.crack("91IMOR3F", &get_checker(), &crate::config::Config::default());
         assert_eq!(result.unencrypted_text.unwrap()[0], "Hello");
     }
 
     #[test]
     fn base32hex_padding() {
         let decoder = Decoder::<Base32HexDecoder>::new();
-        let result = decoder.crack("91IMOR3F======", &get_checker());
+        let result = decoder.crack("91IMOR3F======", &get_checker(), &crate::config::Config::default());
         assert_eq!(result.unencrypted_text.unwrap()[0], "Hello");
     }
 }

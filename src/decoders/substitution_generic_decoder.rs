@@ -2,6 +2,7 @@ use super::crack_results::CrackResult;
 use super::interface::Crack;
 use super::interface::Decoder;
 use crate::checkers::CheckerTypes;
+use crate::config::Config;
 use crate::decoders::binary_decoder::BinaryDecoder;
 use crate::decoders::morse_code::MorseCodeDecoder;
 use log::trace;
@@ -22,7 +23,7 @@ impl Crack for Decoder<SubstitutionGenericDecoder> {
         }
     }
 
-    fn crack(&self, text: &str, checker: &CheckerTypes) -> CrackResult {
+    fn crack(&self, text: &str, checker: &CheckerTypes, config: &Config) -> CrackResult {
         trace!("Trying SubstitutionGenericDecoder with text {:?}", text);
         let mut results = CrackResult::new(self, text.to_string());
         let unique_symbols: Vec<char> = text.chars().collect::<HashSet<_>>().into_iter().collect();
@@ -63,8 +64,8 @@ impl Crack for Decoder<SubstitutionGenericDecoder> {
             );
 
             let decoder_result = match target_type {
-                "binary" => Decoder::<BinaryDecoder>::new().crack(&substituted, checker),
-                "morse" => Decoder::<MorseCodeDecoder>::new().crack(&substituted, checker),
+                "binary" => Decoder::<BinaryDecoder>::new().crack(&substituted, checker, &crate::config::Config::default()),
+                "morse" => Decoder::<MorseCodeDecoder>::new().crack(&substituted, checker, &crate::config::Config::default()),
                 _ => continue,
             };
 
@@ -148,7 +149,7 @@ mod tests {
     #[test]
     fn test_morse_substitution() {
         let decoder = Decoder::<SubstitutionGenericDecoder>::new();
-        let result = decoder.crack("00002020100201002111", &get_athena_checker());
+        let result = decoder.crack("00002020100201002111", &get_athena_checker(), &crate::config::Config::default());
 
         // Print debug info if test fails
         if !result.success {
@@ -173,7 +174,7 @@ mod tests {
     #[test]
     fn test_binary_substitution() {
         let decoder = Decoder::<SubstitutionGenericDecoder>::new();
-        let result = decoder.crack("AABBAABBAABBAABBAABBAA", &get_athena_checker());
+        let result = decoder.crack("AABBAABBAABBAABBAABBAA", &get_athena_checker(), &crate::config::Config::default());
 
         // Print debug info if test fails
         if !result.success {

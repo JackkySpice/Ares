@@ -2,7 +2,8 @@ use gibberish_or_not::Sensitivity;
 use lemmeknow::Identifier;
 
 use super::checker_type::{Check, Checker};
-use crate::{checkers::checker_result::CheckResult, config::get_config};
+use crate::checkers::checker_result::CheckResult;
+use crate::config::Config;
 use log::trace;
 use regex::Regex;
 
@@ -26,11 +27,13 @@ impl Check for Checker<RegexChecker> {
         }
     }
 
-    fn check(&self, text: &str) -> CheckResult {
+    fn check(&self, text: &str, config: &Config) -> CheckResult {
         trace!("Checking {} with regex", text);
         // TODO put this into a lazy static so we don't generate it everytime
-        let config = get_config();
         let regex_to_parse = config.regex.clone();
+        if regex_to_parse.is_none() {
+             return CheckResult::new(self);
+        }
         let re = Regex::new(&regex_to_parse.unwrap()).unwrap();
 
         let regex_check_result = re.is_match(text);

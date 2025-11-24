@@ -4,6 +4,7 @@
 //! `result.is_some()` to see if it returned okay.
 
 use crate::checkers::CheckerTypes;
+use crate::config::Config;
 use crate::decoders::interface::check_string_success;
 use crate::decoders::crack_results::CrackResult;
 use crate::decoders::interface::Crack;
@@ -25,7 +26,7 @@ use log::{debug, info, trace};
 /// let athena_checker = Checker::<Athena>::new();
 /// let checker = CheckerTypes::CheckAthena(athena_checker);
 ///
-/// let result = decode_base62.crack("7Dq", &checker).unencrypted_text;
+/// let result = decode_base62.crack("7Dq", &checker, &ares::config::Config::default()).unencrypted_text;
 /// assert!(result.is_some());
 /// assert_eq!(result.unwrap()[0], "lv");
 /// ```
@@ -46,7 +47,7 @@ impl Crack for Decoder<Base62Decoder> {
     /// This function does the actual decoding
     /// It returns an Option<string> if it was successful
     /// Else the Option returns nothing and the error is logged in Trace
-    fn crack(&self, text: &str, checker: &CheckerTypes) -> CrackResult {
+    fn crack(&self, text: &str, checker: &CheckerTypes, config: &Config) -> CrackResult {
         trace!("Trying Base62 with text {:?}", text);
         let mut results = CrackResult::new(self, text.to_string());
         let decoded_text = decode_base62_no_error_handling(text);
@@ -65,7 +66,7 @@ impl Crack for Decoder<Base62Decoder> {
             return results;
         }
 
-        let checker_result = checker.check(&decoded_text);
+        let checker_result = checker.check(&decoded_text, config);
         results.unencrypted_text = Some(vec![decoded_text]);
         results.update_checker(&checker_result);
 
@@ -144,7 +145,7 @@ mod tests {
     fn successful_decoding_1() {
         let base62_decoder = Decoder::<Base62Decoder>::new();
         // "7Dq" -> "lv" using GMP alphabet 0-9A-Za-z.
-        let result = base62_decoder.crack("7Dq", &get_athena_checker());
+        let result = base62_decoder.crack("7Dq", &get_athena_checker(), &crate::config::Config::default());
         assert_eq!(result.unencrypted_text.unwrap()[0], "lv");
     }
 
@@ -152,7 +153,7 @@ mod tests {
     fn successful_decoding_numbers() {
          let base62_decoder = Decoder::<Base62Decoder>::new();
          // "13" -> "A".
-         let result = base62_decoder.crack("13", &get_athena_checker());
+         let result = base62_decoder.crack("13", &get_athena_checker(), &crate::config::Config::default());
          assert_eq!(result.unencrypted_text.unwrap()[0], "A");
     }
 
@@ -160,7 +161,7 @@ mod tests {
     fn base62_decode_empty_string() {
         let base62_decoder = Decoder::<Base62Decoder>::new();
         let result = base62_decoder
-            .crack("", &get_athena_checker())
+            .crack("", &get_athena_checker(), &crate::config::Config::default())
             .unencrypted_text;
         assert!(result.is_none());
     }
@@ -169,7 +170,7 @@ mod tests {
     fn base62_decode_invalid_chars() {
         let base62_decoder = Decoder::<Base62Decoder>::new();
         let result = base62_decoder
-            .crack("Hello!", &get_athena_checker())
+            .crack("Hello!", &get_athena_checker(), &crate::config::Config::default())
             .unencrypted_text;
         assert!(result.is_none());
     }
@@ -178,7 +179,7 @@ mod tests {
     fn base62_handle_panic_if_emoji() {
         let base62_decoder = Decoder::<Base62Decoder>::new();
         let result = base62_decoder
-            .crack("😂", &get_athena_checker())
+            .crack("😂", &get_athena_checker(), &crate::config::Config::default())
             .unencrypted_text;
         assert!(
             result.is_none(),

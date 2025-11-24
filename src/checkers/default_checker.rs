@@ -1,3 +1,4 @@
+use crate::config::Config;
 use gibberish_or_not::Sensitivity;
 use lemmeknow::Identifier;
 
@@ -26,7 +27,7 @@ impl Check for Checker<DefaultChecker> {
         }
     }
 
-    fn check(&self, _text: &str) -> CheckResult {
+    fn check(&self, _text: &str, _config: &Config) -> CheckResult {
         CheckResult::new(self)
     }
 
