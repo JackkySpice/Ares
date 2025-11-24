@@ -167,7 +167,7 @@ mod tests {
                 texts
             );
         } else {
-            assert!(false, "No decoded texts found");
+            panic!("No decoded texts found");
         }
     }
 
@@ -188,7 +188,7 @@ mod tests {
             println!("Decoded binary texts: {:?}", texts);
             assert!(!texts.is_empty(), "Expected non-empty decoded texts");
         } else {
-            assert!(false, "No decoded texts found");
+            panic!("No decoded texts found");
         }
     }
 }
