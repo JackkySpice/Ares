@@ -14,6 +14,7 @@ use ciphey::decoders::base45_decoder::Base45Decoder;
 use ciphey::decoders::bacon_cipher_decoder::BaconCipherDecoder;
 use ciphey::decoders::base32hex_decoder::Base32HexDecoder;
 use ciphey::decoders::affine_cipher::AffineCipherDecoder;
+use ciphey::decoders::xor_decoder::XorDecoder;
 
 fn get_athena_checker() -> CheckerTypes {
     let athena_checker = Checker::<Athena>::new();
@@ -115,4 +116,13 @@ fn test_affine_cipher_decoding() {
     let result = decoder.crack("IHHWVC SWFRCP", &get_athena_checker());
     let results = result.unencrypted_text.unwrap();
     assert!(results.contains(&"AFFINE CIPHER".to_string()));
+}
+
+#[test]
+fn test_xor_decoding() {
+    let decoder = Decoder::<XorDecoder>::new();
+    // "HELLO" XOR 32 = "hello"
+    let result = decoder.crack("HELLO", &get_athena_checker());
+    let results = result.unencrypted_text.unwrap();
+    assert!(results.contains(&"hello".to_string()));
 }

@@ -50,6 +50,7 @@ use crate::decoders::bacon_cipher_decoder::BaconCipherDecoder;
 use crate::decoders::base32hex_decoder::Base32HexDecoder;
 use crate::decoders::affine_cipher::AffineCipherDecoder;
 use crate::decoders::beaufort_decoder::BeaufortDecoder;
+use crate::decoders::xor_decoder::XorDecoder;
 
 use log::trace;
 use rayon::prelude::*;
@@ -283,6 +284,7 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
     let base32hex = Decoder::<Base32HexDecoder>::new();
     let affine = Decoder::<AffineCipherDecoder>::new();
     let beaufort = Decoder::<BeaufortDecoder>::new();
+    let xor = Decoder::<XorDecoder>::new();
 
     Decoders {
         components: vec![
@@ -324,6 +326,7 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
             Box::new(base32hex),
             Box::new(affine),
             Box::new(beaufort),
+            Box::new(xor),
         ],
     }
 }
