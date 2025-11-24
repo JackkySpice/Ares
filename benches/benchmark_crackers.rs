@@ -1,9 +1,9 @@
-use ciphey::checkers::athena::Athena;
-use ciphey::checkers::checker_type::{Check, Checker};
-use ciphey::checkers::CheckerTypes;
-use ciphey::config::{set_global_config, Config};
-use ciphey::decoders::base64_decoder::Base64Decoder;
-use ciphey::decoders::interface::{Crack, Decoder};
+use ares::checkers::athena::Athena;
+use ares::checkers::checker_type::{Check, Checker};
+use ares::checkers::CheckerTypes;
+use ares::config::{set_global_config, Config};
+use ares::decoders::base64_decoder::Base64Decoder;
+use ares::decoders::interface::{Crack, Decoder};
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use env_logger::Builder;
 use log::LevelFilter;

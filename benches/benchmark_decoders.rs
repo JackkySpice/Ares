@@ -1,8 +1,8 @@
-use ciphey::checkers::athena::Athena;
-use ciphey::checkers::checker_type::{Check, Checker};
-use ciphey::checkers::CheckerTypes;
-use ciphey::config::{set_global_config, Config};
-use ciphey::decoders::{
+use ares::checkers::athena::Athena;
+use ares::checkers::checker_type::{Check, Checker};
+use ares::checkers::CheckerTypes;
+use ares::config::{set_global_config, Config};
+use ares::decoders::{
     base32_decoder::Base32Decoder,
     base58_bitcoin_decoder::Base58BitcoinDecoder,
     base58_flickr_decoder::Base58FlickrDecoder,
@@ -141,8 +141,8 @@ fn benchmark_decoder<T>(
         group.bench_with_input(id, test.encoded, |b, encoded| {
             b.iter_batched_ref(
                 || {
-                    let _test_db = ciphey::TestDatabase::default();
-                    ciphey::set_test_db_path();
+                    let _test_db = ares::TestDatabase::default();
+                    ares::set_test_db_path();
                 },
                 |_| decoder.crack(black_box(encoded), checker),
                 criterion::BatchSize::SmallInput,

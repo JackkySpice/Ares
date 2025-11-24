@@ -1,4 +1,4 @@
-//! ciphey is an automatic decoding and cracking tool. https://github.com/bee-san/ciphey
+//! Ares is an automatic decoding and cracking tool. https://github.com/bee-san/ares
 // Warns in case we forget to include documentation
 #![warn(
     missing_docs,
@@ -7,8 +7,8 @@
     clippy::missing_panics_doc
 )]
 
-/// The main crate for the ciphey project.
-/// This provides the library API interface for ciphey.
+/// The main crate for the Ares project.
+/// This provides the library API interface for ares.
 mod api_library_input_struct;
 /// Checkers is a module that contains the functions that check if the input is plaintext
 pub mod checkers;
@@ -20,7 +20,7 @@ mod cli_input_parser;
 ///
 /// # Examples
 /// ```
-/// use ciphey::cli_pretty_printing::{success, warning};
+/// use ares::cli_pretty_printing::{success, warning};
 ///
 /// // Print a success message
 /// let success_msg = success("Operation completed successfully");
@@ -65,11 +65,11 @@ use self::decoders::crack_results::CrackResult;
 
 /// The main function to call which performs the cracking.
 /// ```rust
-/// use ciphey::perform_cracking;
-/// use ciphey::config::Config;
+/// use ares::perform_cracking;
+/// use ares::config::Config;
 /// let mut config = Config::default();
-/// # let _test_db = ciphey::TestDatabase::default();
-/// # ciphey::set_test_db_path();
+/// # let _test_db = ares::TestDatabase::default();
+/// # ares::set_test_db_path();
 /// // You can set the config to your liking using the Config struct
 /// // Just edit the data like below if you want:
 /// config.timeout = 5;
@@ -88,11 +88,11 @@ use self::decoders::crack_results::CrackResult;
 /// The human checker defaults to off in the config, but it returns the first thing it finds currently.
 /// We have an issue for that here https://github.com/bee-san/ciphey/issues/129
 /// ```rust
-/// use ciphey::perform_cracking;
-/// use ciphey::config::Config;
+/// use ares::perform_cracking;
+/// use ares::config::Config;
 /// let mut config = Config::default();
-/// # let _test_db = ciphey::TestDatabase::default();
-/// # ciphey::set_test_db_path();
+/// # let _test_db = ares::TestDatabase::default();
+/// # ares::set_test_db_path();
 /// // You can set the config to your liking using the Config struct
 /// // Just edit the data like below if you want:
 /// config.timeout = 0;
@@ -325,7 +325,7 @@ impl DecoderResult {
 #[doc(hidden)]
 pub fn get_test_dir_path() -> std::path::PathBuf {
     let mut path = dirs::home_dir().expect("Could not find home directory");
-    path.push(".ciphey");
+    path.push(".ares");
     path.push("test");
     path
 }
@@ -334,7 +334,7 @@ pub fn get_test_dir_path() -> std::path::PathBuf {
 #[doc(hidden)]
 pub fn set_test_db_path() {
     let mut path = get_test_dir_path();
-    std::fs::create_dir_all(&path).expect("Could not create .ciphey directory");
+    std::fs::create_dir_all(&path).expect("Could not create .ares directory");
     path.push("database.sqlite");
     let _ = crate::storage::database::DB_PATH.set(Some(path));
 }

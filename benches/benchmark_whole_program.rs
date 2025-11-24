@@ -1,5 +1,5 @@
-use ciphey::config::Config;
-use ciphey::perform_cracking;
+use ares::config::Config;
+use ares::perform_cracking;
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 use env_logger::Builder;
 use log::LevelFilter;
@@ -90,8 +90,8 @@ fn benchmark_with_config(
         group.bench_with_input(id, text, |b, text| {
             b.iter_batched_ref(
                 || {
-                    let _test_db = ciphey::TestDatabase::default();
-                    ciphey::set_test_db_path();
+                    let _test_db = ares::TestDatabase::default();
+                    ares::set_test_db_path();
                 },
                 |_| {
                     // Create config and set necessary parameters
