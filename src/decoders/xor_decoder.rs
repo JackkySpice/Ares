@@ -100,7 +100,6 @@ impl Crack for Decoder<XorDecoder> {
 #[cfg(test)]
 mod tests {
     use super::XorDecoder;
-    use super::*;
     use crate::{
         checkers::{
             athena::Athena,

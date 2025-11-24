@@ -2,7 +2,7 @@ use crate::checkers::checker_result::CheckResult;
 use crate::cli_pretty_printing::human_checker_check;
 use crate::config::Config;
 use crate::storage::database;
-use crate::{cli_pretty_printing, timer};
+use crate::timer;
 use dashmap::DashSet;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::OnceLock;
@@ -42,7 +42,7 @@ pub fn human_checker(input: &CheckResult, config: &Config) -> bool {
     if !get_seen_prompts().insert(prompt_key) {
         return true; // Return true to allow the search to continue
     }
-    human_checker_check(&input.description, &input.text, &config);
+    human_checker_check(&input.description, &input.text, config);
 
     let reply: String = read!("{}\n");
     log::debug!("Human checker received reply: '{}'", reply);

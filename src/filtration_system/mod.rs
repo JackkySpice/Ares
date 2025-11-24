@@ -4,7 +4,6 @@
 use std::sync::mpsc::channel;
 
 use crate::checkers::CheckerTypes;
-use crate::cli_pretty_printing;
 use crate::config::Config;
 use crate::decoders::atbash_decoder::AtbashDecoder;
 use crate::decoders::base32_decoder::Base32Decoder;

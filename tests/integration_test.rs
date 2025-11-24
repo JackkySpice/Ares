@@ -8,7 +8,7 @@ use ares::decoders::interface::{Crack, Decoder};
 use ares::perform_cracking;
 use ares::storage::database;
 use ares::{set_test_db_path, TestDatabase};
-use serial_test::{parallel, serial};
+use serial_test::serial;
 use uuid::Uuid;
 
 // TODO Below fails because Library API is broken.

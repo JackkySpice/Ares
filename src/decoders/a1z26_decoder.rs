@@ -134,7 +134,6 @@ mod tests {
     use crate::checkers::athena::Athena;
     use crate::checkers::checker_type::{Check, Checker};
     use crate::checkers::CheckerTypes;
-use crate::config::Config;
     use crate::decoders::interface::Crack;
 
     // helper for tests
