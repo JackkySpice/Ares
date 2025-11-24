@@ -49,14 +49,15 @@ use std::sync::{Arc, Mutex};
 use dashmap::DashSet;
 use rayon::prelude::*;
 
-use crate::checkers::athena::Athena;
-use crate::checkers::checker_type::{Check, Checker};
-use crate::checkers::CheckerTypes;
-use crate::config::Config;
-use crate::searchers::helper_functions::{
-    calculate_string_worth, check_if_string_cant_be_decoded, generate_heuristic,
-    update_decoder_stats,
-};
+    use crate::checkers::athena::Athena;
+    use crate::checkers::checker_type::{Check, Checker};
+    use crate::checkers::CheckerTypes;
+    use crate::config::Config;
+    use crate::decoders::DECODER_MAP;
+    use crate::searchers::helper_functions::{
+        calculate_string_worth, check_if_string_cant_be_decoded, generate_heuristic,
+        update_decoder_stats,
+    };
 use crate::storage::wait_athena_storage;
 use crate::DecoderResult;
 
@@ -250,28 +251,52 @@ fn expand_node(
 
         // Process decoder results
         match decoder_results {
-            MyResults::Break(res) => {
+            MyResults::Break(results) => {
                 // Handle successful decoding
-                // This part remains mostly unchanged, but instead of sending results directly,
-                // we'll return a special marker node that indicates a successful result
-                if res.success {
-                    let mut decoders_used = current_node.state.path.clone();
-                    let text = res.unencrypted_text.clone().unwrap_or_default();
-                    decoders_used.push(res.clone());
+                for res in results {
+                    if res.success {
+                        let mut decoders_used = current_node.state.path.clone();
+                        let text = res.unencrypted_text.clone().unwrap_or_default();
+                        // If we have multiple texts, we should probably take the first one or iterate?
+                        // For success, usually we take the one that matched.
+                        // CrackResult unencrypted_text is Option<Vec<String>>.
+                        // If it was successful, it probably contains the matched string(s).
+                        // We'll process all of them just in case.
+                        
+                        for t in text {
+                            let mut path = decoders_used.clone();
+                            // We need to reconstruct the CrackResult for this specific text if there are multiple?
+                            // But res corresponds to all of them?
+                            // If res.success is true, it means at least one matched.
+                            // But usually if success is true, unencrypted_text contains ONLY the matched ones.
+                            // So we can just use res.
+                            
+                            // Wait, we need to push res to path.
+                            path.push(res.clone());
 
-                    // Create a special "result" node with a very low total_cost to ensure it's processed first
-                    let result_node = AStarNode {
-                        state: DecoderResult {
-                            text: text.clone(),
-                            path: decoders_used,
-                        },
-                        cost: current_node.cost + 1,
-                        heuristic: -1000.0, // Very negative to ensure highest priority
-                        total_cost: -1000.0, // Very negative to ensure highest priority
-                        next_decoder_name: Some("__RESULT__".to_string()), // Special marker
-                    };
+                            // Calculate popularity bonus
+                            let popularity = if let Some(decoder_box) = DECODER_MAP.get(res.decoder) {
+                                decoder_box.get::<()>().get_popularity()
+                            } else {
+                                0.5
+                            };
 
-                    new_nodes.push(result_node);
+                            // Create a special "result" node with a very low total_cost to ensure it's processed first
+                            // Add popularity bonus to break ties (higher popularity = lower cost)
+                            let result_node = AStarNode {
+                                state: DecoderResult {
+                                    text: vec![t.clone()],
+                                    path,
+                                },
+                                cost: current_node.cost + 1,
+                                heuristic: -1000.0, 
+                                total_cost: -1000.0 - (popularity * 10.0), // Higher popularity -> Lower cost
+                                next_decoder_name: Some("__RESULT__".to_string()), // Special marker
+                            };
+
+                            new_nodes.push(result_node);
+                        }
+                    }
                 }
             }
             MyResults::Continue(results) => {
@@ -283,60 +308,64 @@ fn expand_node(
                     }
 
                     // Clone path to avoid modifying the original
-                    let mut decoders_used = current_node.state.path.clone();
+                    let decoders_used_base = current_node.state.path.clone();
 
-                    // Get decoded text
-                    let text = r.unencrypted_text.clone().unwrap_or_default();
+                    // Get decoded text candidates
+                    let texts = r.unencrypted_text.clone().unwrap_or_default();
 
-                    // Skip if text is empty or already seen
-                    if text.is_empty() {
-                        update_decoder_stats(r.decoder, false);
-                        continue;
+                    // Iterate over ALL candidates, not just the first one
+                    for text in texts {
+                        // Skip if text is empty
+                        if text.is_empty() {
+                            update_decoder_stats(r.decoder, false);
+                            continue;
+                        }
+
+                        // Check if string is worth being decoded
+                        // uses string heuristics. if heuristic is too low, it goes bye bye!
+                        if !calculate_string_worth(&text) {
+                            update_decoder_stats(r.decoder, false);
+                            continue;
+                        }
+
+                        // Check if the string cannot be decoded (aggressive pruning)
+                        if check_if_string_cant_be_decoded(&text) {
+                            update_decoder_stats(r.decoder, false);
+                            continue;
+                        }
+
+                        // Check if we've seen this string before to prevent cycles
+                        let text_hash = calculate_hash(&text);
+                        if !seen_strings.insert(text_hash) {
+                            update_decoder_stats(r.decoder, false);
+                            continue;
+                        }
+
+                        let decoders_used = decoders_used_base.clone();
+                        decoders_used.push(r.clone());
+
+                        // Create new node with updated cost and heuristic
+                        let cost = current_node.cost + 1;
+                        let heuristic = generate_heuristic(&text, &decoders_used, &None);
+                        let total_cost = cost as f32 + heuristic;
+
+                        let new_node = AStarNode {
+                            state: DecoderResult {
+                                text: vec![text.clone()], // Store as vector with single element
+                                path: decoders_used,
+                            },
+                            cost,
+                            heuristic,
+                            total_cost,
+                            next_decoder_name: Some(r.decoder.to_string()),
+                        };
+
+                        // Add to new nodes
+                        new_nodes.push(new_node);
+
+                        // Update decoder stats - mark as successful since it produced valid output
+                        update_decoder_stats(r.decoder, true);
                     }
-
-                    // Check if string is worth being decoded
-                    // uses string heuristics. if heuristic is too low, it goes bye bye!
-                    if !calculate_string_worth(&text[0]) {
-                        update_decoder_stats(r.decoder, false);
-                        continue;
-                    }
-
-                    // Check if the string cannot be decoded (aggressive pruning)
-                    if check_if_string_cant_be_decoded(&text[0]) {
-                        update_decoder_stats(r.decoder, false);
-                        continue;
-                    }
-
-                    // Check if we've seen this string before to prevent cycles
-                    let text_hash = calculate_hash(&text[0]);
-                    if !seen_strings.insert(text_hash) {
-                        update_decoder_stats(r.decoder, false);
-                        continue;
-                    }
-
-                    decoders_used.push(r.clone());
-
-                    // Create new node with updated cost and heuristic
-                    let cost = current_node.cost + 1;
-                    let heuristic = generate_heuristic(&text[0], &decoders_used, &None);
-                    let total_cost = cost as f32 + heuristic;
-
-                    let new_node = AStarNode {
-                        state: DecoderResult {
-                            text,
-                            path: decoders_used,
-                        },
-                        cost,
-                        heuristic,
-                        total_cost,
-                        next_decoder_name: Some(r.decoder.to_string()),
-                    };
-
-                    // Add to new nodes
-                    new_nodes.push(new_node);
-
-                    // Update decoder stats - mark as successful since it produced valid output
-                    update_decoder_stats(r.decoder, true);
                 }
             }
         }
@@ -360,15 +389,13 @@ fn expand_node(
 
             // Skip decoders that were already tried
             if let Some(last_decoder) = current_node.state.path.last() {
+                // If we are trying the same decoder again
                 if last_decoder.decoder == decoder.get_name() {
-                    continue;
-                }
-
-                // Skip reciprocal decoders if the last one was reciprocal
-                if last_decoder.checker_description.contains("reciprocal")
-                    && last_decoder.decoder == decoder.get_name()
-                {
-                    continue;
+                    // Only skip if the decoder is reciprocal (e.g. Rot13 applied twice returns original)
+                    // Non-reciprocal decoders (e.g. Base64) can be applied multiple times (Base64 -> Base64)
+                    if decoder.get_tags().contains(&"reciprocal") {
+                        continue;
+                    }
                 }
             }
 

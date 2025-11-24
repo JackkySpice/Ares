@@ -144,12 +144,9 @@ mod tests {
         let dc = DecoderResult::_new("aHR0cHM6Ly93d3cuZ29vZ2xlLmNvbQ==");
         let config = Config::default();
         let result = perform_decoding(&dc, &config);
-        assert!(
-            result
-                ._break_value()
-                .expect("expected successful value, none found")
-                .success
-        );
+        let results = result._break_value().expect("expected successful value, none found");
+        assert!(!results.is_empty());
+        assert!(results[0].success);
         //TODO assert that the plaintext is correct by looping over the vector
     }
     #[test]

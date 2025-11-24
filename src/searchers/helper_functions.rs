@@ -127,7 +127,7 @@ pub fn calculate_string_quality(s: &str) -> f32 {
     // Factors to consider:
     // 1. Length (not too short, not too long
     if s.len() < 3 {
-        0.1
+        0.5 // Short strings are risky but could be valid (e.g. "hi", "ok")
     } else if s.len() > 5000 {
         0.3
     } else {
@@ -244,7 +244,7 @@ pub fn generate_heuristic(
 /// prevents the search from exploring unproductive paths.
 pub fn check_if_string_cant_be_decoded(text: &str) -> bool {
     // Check for strings that are too short
-    if text.len() <= 2 {
+    if text.is_empty() {
         return true;
     }
 

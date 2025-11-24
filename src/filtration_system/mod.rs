@@ -27,8 +27,6 @@ pub struct Decoders {
 
 impl Decoders {
     /// Iterate over all of the decoders and run .crack(text) on them
-    /// Then if the checker succeed, we short-circuit the iterator
-    /// and stop all processing as soon as possible.
     /// We are using Trait Objects
     /// https://doc.rust-lang.org/book/ch17-02-trait-objects.html
     /// Which allows us to have multiple different structs in the same vector
@@ -41,39 +39,33 @@ impl Decoders {
         let (sender, receiver) = channel();
         self.components
             .par_iter()
-            .try_for_each_with(sender, |s, i| {
+            .for_each_with(sender, |s, i| {
                 let results = i.crack(text, checker, config);
                 if results.success {
                     log::debug!(
-                        "DEBUG: filtration_system - Decoder {} succeeded, short-circuiting",
+                        "DEBUG: filtration_system - Decoder {} succeeded",
                         results.decoder
                     );
                     s.send(results.clone()).expect("expected no send error!");
-                    // returning None short-circuits the iterator
-                    // we don't process any further as we got success
-                    return None;
                 }
-                log::debug!(
-                    "DEBUG: filtration_system - Decoder {} failed, continuing",
-                    results.decoder
-                );
-                s.send(results.clone()).expect("expected no send error!");
-                // return Some(()) to indicate that continue processing
-                Some(())
             });
 
         let mut all_results: Vec<CrackResult> = Vec::new();
+        let mut successful_results: Vec<CrackResult> = Vec::new();
 
         while let Ok(result) = receiver.recv() {
-            // if we recv success, break.
             if result.success {
-                log::debug!(
-                    "DEBUG: filtration_system - Received successful result from {}, returning Break",
-                    result.decoder
-                );
-                return MyResults::Break(result);
+                successful_results.push(result.clone());
             }
             all_results.push(result)
+        }
+
+        if !successful_results.is_empty() {
+             log::debug!(
+                "DEBUG: filtration_system - Received {} successful results, returning Break",
+                successful_results.len()
+            );
+            return MyResults::Break(successful_results);
         }
 
         log::debug!(
@@ -85,11 +77,11 @@ impl Decoders {
 }
 
 /// [`Enum`] for our custom results.
-/// if our checker succeed, we return `Break` variant contining [`CrackResult`]
+/// if our checker succeed, we return `Break` variant contining [`Vec<CrackResult>`]
 /// else we return `Continue` with the decoded results.
 pub enum MyResults {
-    /// Variant containing successful [`CrackResult`]
-    Break(CrackResult),
+    /// Variant containing successful [`Vec<CrackResult>`]
+    Break(Vec<CrackResult>),
     /// Contains [`Vec`] of [`CrackResult`] for further processing
     Continue(Vec<CrackResult>),
 }
@@ -97,7 +89,7 @@ pub enum MyResults {
 impl MyResults {
     /// named with _ to pass dead_code warning
     /// as we aren't using it, it's just used in tests
-    pub fn _break_value(self) -> Option<CrackResult> {
+    pub fn _break_value(self) -> Option<Vec<CrackResult>> {
         match self {
             MyResults::Break(val) => Some(val),
             MyResults::Continue(_) => None,
