@@ -1,7 +1,7 @@
 use ares::checkers::athena::Athena;
 use ares::checkers::checker_type::{Check, Checker};
 use ares::checkers::CheckerTypes;
-use ares::config::{set_global_config, Config};
+use ares::config::Config;
 use ares::decoders::{
     base32_decoder::Base32Decoder,
     base58_bitcoin_decoder::Base58BitcoinDecoder,
@@ -11,14 +11,16 @@ use ares::decoders::{
     hexadecimal_decoder::HexadecimalDecoder,
     interface::{Crack, Decoder},
 };
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
+use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use env_logger::Builder;
 use log::LevelFilter;
+use std::hint::black_box;
 use std::time::Duration;
 
 // Test cases for different decoders
 struct DecoderTestCase<'a> {
     encoded: &'a str,
+    #[allow(dead_code)]
     expected: &'a str,
     description: &'a str,
 }
@@ -73,13 +75,14 @@ pub fn benchmark_decoders(c: &mut Criterion) {
     // Initialize logger with only error level to suppress debug messages
     let mut builder = Builder::new();
     builder.filter_level(LevelFilter::Error);
-    builder.init();
+    builder.try_init().ok();
 
     // Setup global config to suppress output
-    let mut config = Config::default();
-    config.api_mode = true;
-    config.verbose = 0;
-    set_global_config(config);
+    let config = Config {
+        api_mode: true,
+        verbose: 0,
+        ..Config::default()
+    };
 
     // Create a benchmark group with appropriate measurement time
     let mut group = c.benchmark_group("decoder_performance");
@@ -91,16 +94,16 @@ pub fn benchmark_decoders(c: &mut Criterion) {
     let checker = CheckerTypes::CheckAthena(athena_checker);
 
     // Base64 decoder benchmarks
-    benchmark_decoder::<Base64Decoder>(&mut group, "base64", BASE64_TESTS, &checker);
+    benchmark_decoder::<Base64Decoder>(&mut group, "base64", BASE64_TESTS, &checker, &config);
 
     // Base32 decoder benchmarks
-    benchmark_decoder::<Base32Decoder>(&mut group, "base32", BASE32_TESTS, &checker);
+    benchmark_decoder::<Base32Decoder>(&mut group, "base32", BASE32_TESTS, &checker, &config);
 
     // Hex decoder benchmarks
-    benchmark_decoder::<HexadecimalDecoder>(&mut group, "hexadecimal", HEX_TESTS, &checker);
+    benchmark_decoder::<HexadecimalDecoder>(&mut group, "hexadecimal", HEX_TESTS, &checker, &config);
 
     // Binary decoder benchmarks
-    benchmark_decoder::<BinaryDecoder>(&mut group, "binary", BINARY_TESTS, &checker);
+    benchmark_decoder::<BinaryDecoder>(&mut group, "binary", BINARY_TESTS, &checker, &config);
 
     // Base58 Bitcoin decoder benchmarks
     benchmark_decoder::<Base58BitcoinDecoder>(
@@ -108,6 +111,7 @@ pub fn benchmark_decoders(c: &mut Criterion) {
         "base58_bitcoin",
         BASE58_BITCOIN_TESTS,
         &checker,
+        &config,
     );
 
     // Base58 Flickr decoder benchmarks
@@ -116,6 +120,7 @@ pub fn benchmark_decoders(c: &mut Criterion) {
         "base58_flickr",
         BASE58_FLICKR_TESTS,
         &checker,
+        &config,
     );
 
     group.finish();
@@ -127,6 +132,7 @@ fn benchmark_decoder<T>(
     decoder_name: &str,
     test_cases: &[DecoderTestCase],
     checker: &CheckerTypes,
+    config: &Config,
 ) where
     Decoder<T>: Crack,
 {
@@ -144,7 +150,7 @@ fn benchmark_decoder<T>(
                     let _test_db = ares::TestDatabase::default();
                     ares::set_test_db_path();
                 },
-                |_| decoder.crack(black_box(encoded), checker),
+                |_| decoder.crack(black_box(encoded), checker, config),
                 criterion::BatchSize::SmallInput,
             )
         });
