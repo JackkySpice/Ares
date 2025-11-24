@@ -40,6 +40,7 @@ pub fn update_decoder_stats(decoder: &str, success: bool) {
 /// # Returns
 ///
 /// * The success rate as a float between 0.0 and 1.0
+#[allow(dead_code)]
 pub fn get_decoder_success_rate(decoder: &str) -> f32 {
     let stats = DECODER_SUCCESS_RATES.lock().unwrap();
     if let Some((successes, total)) = stats.get(decoder) {

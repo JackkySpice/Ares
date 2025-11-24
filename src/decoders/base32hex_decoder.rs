@@ -8,8 +8,12 @@ use crate::decoders::interface::Crack;
 use crate::decoders::interface::Decoder;
 
 use data_encoding::BASE32HEX_NOPAD;
-use log::{debug, info, trace};
+use log::trace;
 
+/// The Base32Hex decoder, call:
+/// `let base32hex_decoder = Decoder::<Base32HexDecoder>::new()` to create a new instance
+/// And then call:
+/// `result = base32hex_decoder.crack(input)` to decode a Base32Hex string
 pub struct Base32HexDecoder;
 
 impl Crack for Decoder<Base32HexDecoder> {

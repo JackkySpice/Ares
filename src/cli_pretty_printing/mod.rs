@@ -473,6 +473,9 @@ pub fn warning_unknown_config_key(key: &str) {
 }
 
 /// Display all plaintext results collected by WaitAthena
+///
+/// # Panics
+/// Panics if it fails to read from stdin when prompting the user.
 pub fn display_top_results(results: &[PlaintextResult]) {
     let config = crate::config::get_config();
     if config.api_mode {

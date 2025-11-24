@@ -9,6 +9,10 @@ use crate::decoders::interface::Decoder;
 
 use log::{debug, info, trace};
 
+/// The Decimal decoder, call:
+/// `let decimal_decoder = Decoder::<DecimalDecoder>::new()` to create a new instance
+/// And then call:
+/// `result = decimal_decoder.crack(input)` to decode a Decimal string
 pub struct DecimalDecoder;
 
 impl Crack for Decoder<DecimalDecoder> {
@@ -53,6 +57,7 @@ impl Crack for Decoder<DecimalDecoder> {
     fn get_link(&self) -> &str { self.link }
 }
 
+/// Helper function to decode decimal string
 fn decode_decimal_no_error_handling(text: &str) -> Option<String> {
     if text.is_empty() { return None; }
 

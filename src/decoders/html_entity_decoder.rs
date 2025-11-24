@@ -7,9 +7,12 @@ use crate::decoders::crack_results::CrackResult;
 use crate::decoders::interface::Crack;
 use crate::decoders::interface::Decoder;
 use html_escape::decode_html_entities;
+use log::trace;
 
-use log::{debug, info, trace};
-
+/// The HTML Entity decoder, call:
+/// `let html_entity_decoder = Decoder::<HtmlEntityDecoder>::new()` to create a new instance
+/// And then call:
+/// `result = html_entity_decoder.crack(input)` to decode an HTML Entity string
 pub struct HtmlEntityDecoder;
 
 impl Crack for Decoder<HtmlEntityDecoder> {

@@ -6,9 +6,12 @@ use crate::decoders::interface::check_string_success;
 use crate::decoders::crack_results::CrackResult;
 use crate::decoders::interface::Crack;
 use crate::decoders::interface::Decoder;
+use log::trace;
 
-use log::{debug, info, trace};
-
+/// The Punycode decoder, call:
+/// `let punycode_decoder = Decoder::<PunycodeDecoder>::new()` to create a new instance
+/// And then call:
+/// `result = punycode_decoder.crack(input)` to decode a Punycode string
 pub struct PunycodeDecoder;
 
 impl Crack for Decoder<PunycodeDecoder> {
@@ -52,6 +55,7 @@ impl Crack for Decoder<PunycodeDecoder> {
     fn get_link(&self) -> &str { self.link }
 }
 
+/// Helper function to decode punycode string
 fn decode_punycode_no_error_handling(text: &str) -> Option<String> {
     if text.is_empty() { return None; }
 
@@ -60,8 +64,8 @@ fn decode_punycode_no_error_handling(text: &str) -> Option<String> {
     // or checks for it?
     // Let's check typical usage. punycode::decode takes a str.
 
-    let input = if text.starts_with("xn--") {
-        &text[4..]
+    let input = if let Some(stripped) = text.strip_prefix("xn--") {
+        stripped
     } else {
         text
     };

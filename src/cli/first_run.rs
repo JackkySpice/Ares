@@ -6,7 +6,6 @@
 
 use colored::Colorize;
 // use gibberish_or_not::download_model_with_progress_bar;
-use rpassword;
 use std::collections::HashMap;
 use std::fmt::Display;
 use std::io::{self, Write};
@@ -74,6 +73,7 @@ fn print_question<T: Display>(text: T) -> String {
 ///
 /// # Returns
 /// * `String` - The input text formatted in green color
+#[allow(dead_code)]
 fn print_success<T: Display>(text: T) -> String {
     text.to_string().green().to_string()
 }

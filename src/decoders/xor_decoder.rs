@@ -9,8 +9,7 @@ use gibberish_or_not::Sensitivity;
 use super::crack_results::CrackResult;
 use super::interface::Crack;
 use super::interface::Decoder;
-
-use log::{info, trace};
+use log::trace;
 
 /// The XOR decoder, call:
 /// `let xor_decoder = Decoder::<XorDecoder>::new()` to create a new instance

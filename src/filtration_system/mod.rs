@@ -76,6 +76,9 @@ impl Decoders {
     /// https://doc.rust-lang.org/book/ch17-02-trait-objects.html
     /// Which allows us to have multiple different structs in the same vector
     /// But each struct shares the same `.crack()` method, so it's fine.
+    ///
+    /// # Panics
+    /// Panics if the channel sender fails to send a result, which should not happen in normal operation.
     pub fn run(&self, text: &str, checker: CheckerTypes) -> MyResults {
         trace!("Running .crack() on all decoders");
         let (sender, receiver) = channel();
@@ -150,6 +153,12 @@ pub struct DecoderFilter {
     exclude_tags: Vec<String>,
 }
 
+impl Default for DecoderFilter {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl DecoderFilter {
     /// Create a new empty filter
     pub fn new() -> Self {
@@ -208,8 +217,7 @@ impl DecoderFilter {
 pub fn get_decoder_tagged_decoders(text_struct: &DecoderResult) -> Decoders {
     trace!("Getting decoder-tagged decoders");
     let filter = DecoderFilter::new().include_tag("decoder");
-    let decoders = filter_decoders_by_tags(text_struct, &filter);
-    decoders
+    filter_decoders_by_tags(text_struct, &filter)
 }
 
 /// Get decoders without the "decoder" tag

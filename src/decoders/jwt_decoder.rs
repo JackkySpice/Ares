@@ -90,6 +90,8 @@ impl Crack for Decoder<JwtDecoder> {
     }
 }
 
+/// Helper function to decode a JWT part (header or payload)
+/// Tries multiple base64 variants (URL-safe, Standard, with/without padding)
 fn decode_part(part: &str) -> Option<String> {
     // JWT uses URL-safe base64, sometimes with no padding
     // We try to decode it

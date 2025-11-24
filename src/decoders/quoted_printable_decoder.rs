@@ -6,9 +6,12 @@ use crate::decoders::interface::check_string_success;
 use crate::decoders::crack_results::CrackResult;
 use crate::decoders::interface::Crack;
 use crate::decoders::interface::Decoder;
+use log::trace;
 
-use log::{debug, info, trace};
-
+/// The Quoted-Printable decoder, call:
+/// `let quoted_printable_decoder = Decoder::<QuotedPrintableDecoder>::new()` to create a new instance
+/// And then call:
+/// `result = quoted_printable_decoder.crack(input)` to decode a Quoted-Printable string
 pub struct QuotedPrintableDecoder;
 
 impl Crack for Decoder<QuotedPrintableDecoder> {
@@ -29,20 +32,14 @@ impl Crack for Decoder<QuotedPrintableDecoder> {
 
         // quoted_printable crate expects ParseMode.
         // We can use decode(input, mode)
-        match quoted_printable::decode(text, quoted_printable::ParseMode::Robust) {
-            Ok(bytes) => {
-                match String::from_utf8(bytes) {
-                    Ok(decoded_text) => {
-                         if check_string_success(&decoded_text, text) {
-                            let checker_result = checker.check(&decoded_text);
-                            results.unencrypted_text = Some(vec![decoded_text]);
-                            results.update_checker(&checker_result);
-                         }
-                    },
-                    Err(_) => {},
-                }
-            },
-            Err(_) => {},
+        if let Ok(bytes) = quoted_printable::decode(text, quoted_printable::ParseMode::Robust) {
+            if let Ok(decoded_text) = String::from_utf8(bytes) {
+                 if check_string_success(&decoded_text, text) {
+                    let checker_result = checker.check(&decoded_text);
+                    results.unencrypted_text = Some(vec![decoded_text]);
+                    results.update_checker(&checker_result);
+                 }
+            }
         }
 
         results

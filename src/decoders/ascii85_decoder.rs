@@ -140,7 +140,7 @@ fn decode_ascii85_no_error_handling(input: &str) -> Option<String> {
         for j in 0..5 {
             if i + j < expanded.len() {
                 let char_code = expanded[i + j] as u8;
-                if char_code < 33 || char_code > 117 {
+                if !(33..=117).contains(&char_code) {
                     return None;
                 }
                 chunk_val = chunk_val.wrapping_mul(85).wrapping_add((char_code - 33) as u32);
@@ -163,8 +163,8 @@ fn decode_ascii85_no_error_handling(input: &str) -> Option<String> {
              // Padding handling:
              // We output count-1 bytes.
              if count > 1 {
-                for k in 0..(count - 1) {
-                    output.push(bytes[k]);
+                for byte in bytes.iter().take(count - 1) {
+                    output.push(*byte);
                 }
              } else {
                  // 1 char chunk is invalid

@@ -8,9 +8,12 @@ use crate::decoders::crack_results::CrackResult;
 use crate::decoders::interface::Crack;
 use crate::decoders::interface::Decoder;
 use gibberish_or_not::Sensitivity;
+use log::trace;
 
-use log::{debug, info, trace};
-
+/// The Affine Cipher decoder, call:
+/// `let affine_cipher_decoder = Decoder::<AffineCipherDecoder>::new()` to create a new instance
+/// And then call:
+/// `result = affine_cipher_decoder.crack(input)` to decode an Affine Cipher string
 pub struct AffineCipherDecoder;
 
 impl Crack for Decoder<AffineCipherDecoder> {
@@ -30,7 +33,7 @@ impl Crack for Decoder<AffineCipherDecoder> {
         let mut results = CrackResult::new(self, text.to_string());
 
         // Coprimes to 26: 1, 3, 5, 7, 9, 11, 15, 17, 19, 21, 23, 25
-        let coprimes = vec![1, 3, 5, 7, 9, 11, 15, 17, 19, 21, 23, 25];
+        let _coprimes = [1, 3, 5, 7, 9, 11, 15, 17, 19, 21, 23, 25];
         let mut best_candidates = Vec::new();
 
         // Calculate modular multiplicative inverses for valid 'a'
@@ -43,7 +46,7 @@ impl Crack for Decoder<AffineCipherDecoder> {
 
         let checker_with_sensitivity = checker.with_sensitivity(Sensitivity::Medium);
 
-        for (a, a_inv) in inverses {
+        for (_a, a_inv) in inverses {
             for b in 0..26 {
                 let decoded = decrypt_affine(text, a_inv, b);
                 if check_string_success(&decoded, text) {
@@ -75,6 +78,7 @@ impl Crack for Decoder<AffineCipherDecoder> {
     fn get_link(&self) -> &str { self.link }
 }
 
+/// Helper function to decrypt affine cipher
 fn decrypt_affine(text: &str, a_inv: i32, b: i32) -> String {
     text.chars().map(|c| {
         if c.is_ascii_alphabetic() {

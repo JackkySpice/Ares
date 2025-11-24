@@ -8,11 +8,14 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::OnceLock;
 use text_io::read;
 
+/// Tracks which prompts have already been shown to the user to avoid duplicates
 static SEEN_PROMPTS: OnceLock<DashSet<String>> = OnceLock::new();
 // if human checker is called, we set this to true
 // so we dont call it again
+/// Tracks if a human has already confirmed a result to skip future checks
 static HUMAN_CONFIRMED: AtomicBool = AtomicBool::new(false);
 
+/// Gets the set of seen prompts, initializing it if necessary
 fn get_seen_prompts() -> &'static DashSet<String> {
     SEEN_PROMPTS.get_or_init(DashSet::new)
 }

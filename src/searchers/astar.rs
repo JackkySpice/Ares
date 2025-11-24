@@ -100,6 +100,7 @@ struct AStarNode {
     /// Currently a placeholder value, but could be improved with
     /// cipher identification techniques to better estimate how close
     /// we are to finding plaintext
+    #[allow(dead_code)]
     heuristic: f32,
 
     /// Total cost (f = g + h) used for prioritization in the queue
@@ -137,37 +138,43 @@ impl Eq for AStarNode {}
 
 /// Thread-safe priority queue wrapper for A* open set
 struct ThreadSafePriorityQueue {
+    /// The underlying binary heap wrapped in a Mutex for thread safety
     queue: Mutex<BinaryHeap<AStarNode>>,
 }
 
 impl ThreadSafePriorityQueue {
+    /// Create a new empty priority queue
     fn new() -> Self {
         ThreadSafePriorityQueue {
             queue: Mutex::new(BinaryHeap::new()),
         }
     }
 
+    /// Push a node onto the queue
     fn push(&self, node: AStarNode) {
         let mut queue = self.queue.lock().unwrap();
         queue.push(node);
     }
 
+    /// Pop the highest priority node from the queue
     fn pop(&self) -> Option<AStarNode> {
         let mut queue = self.queue.lock().unwrap();
         queue.pop()
     }
 
+    /// Check if the queue is empty
     fn is_empty(&self) -> bool {
         let queue = self.queue.lock().unwrap();
         queue.is_empty()
     }
 
+    /// Get the number of elements in the queue
     fn len(&self) -> usize {
         let queue = self.queue.lock().unwrap();
         queue.len()
     }
 
-    // Extract a batch of nodes with highest priority
+    /// Extract a batch of nodes with highest priority
     fn extract_batch(&self, batch_size: usize) -> Vec<AStarNode> {
         let mut queue = self.queue.lock().unwrap();
         let mut batch = Vec::with_capacity(batch_size);
