@@ -98,6 +98,10 @@ pub fn is_common_sequence(prev_decoder: &str, current_cipher: &str) -> bool {
         // URL Encoding
         ("URL", "Base64") => true,
 
+        // Reverse sequences
+        ("Reverse", "Base64") => true,
+        ("Base64", "Reverse") => true,
+
         // No match found
         _ => false,
     }
