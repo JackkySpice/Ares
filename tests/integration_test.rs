@@ -14,8 +14,10 @@ use uuid::Uuid;
 // TODO Below fails because Library API is broken.
 // https://github.com/bee-san/ciphey/issues/48
 #[test]
-#[parallel]
+#[serial]
 fn test_it_works() {
+    let _test_db = TestDatabase::default();
+    set_test_db_path();
     // It will panic if it doesn't work!
     // Plaintext is `Mutley, you snickering, floppy eared hound. When courage is needed, you’re never around. Those m...	`
     let config = Config::default();
@@ -24,8 +26,10 @@ fn test_it_works() {
 }
 
 #[test]
-#[parallel]
+#[serial]
 fn test_no_panic_if_empty_string() {
+    let _test_db = TestDatabase::default();
+    set_test_db_path();
     // It will panic if it doesn't work!
     let config = Config::default();
     perform_cracking("", config);
