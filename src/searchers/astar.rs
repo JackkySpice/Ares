@@ -61,7 +61,8 @@ use crate::storage::wait_athena_storage;
 use crate::DecoderResult;
 
 /// Threshold for pruning the seen_strings HashSet to prevent excessive memory usage
-const PRUNE_THRESHOLD: usize = 100000;
+/// 10 million hashes * 8 bytes = ~80MB, which is reasonable for modern systems
+const PRUNE_THRESHOLD: usize = 10_000_000;
 
 /// Initial pruning threshold for dynamic adjustment
 const INITIAL_PRUNE_THRESHOLD: usize = PRUNE_THRESHOLD;
@@ -636,16 +637,12 @@ pub fn astar(
             // Prune seen strings if we've accumulated too many
             let current_seen_count = seen_strings.len();
             if current_seen_count > prune_threshold.load(AtomicOrdering::Relaxed) {
-                // Prune seen strings (implementation depends on how you want to handle this)
-                // This is a simplified version - you might want a more sophisticated approach
+                // We've reached a very large number of seen strings.
+                // Clearing the set risks cycles, but we need to reclaim memory.
+                // Ideally we would evict old items, but for now we clear.
+                // With 10M threshold, this should rarely happen.
                 seen_strings.clear();
-
-                // Adjust threshold based on search progress
-                let progress_factor = new_depth as f32 / MAX_DEPTH as f32;
-                let new_threshold = INITIAL_PRUNE_THRESHOLD - (progress_factor * 5000.0) as usize;
-                prune_threshold.store(new_threshold, AtomicOrdering::Relaxed);
-
-                debug!("Pruned seen strings (new threshold: {})", new_threshold);
+                debug!("Pruned seen strings (threshold reached: {})", current_seen_count);
             }
         }
     }
