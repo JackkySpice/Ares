@@ -42,7 +42,7 @@ impl Crack for Decoder<BeaufortDecoder> {
             name: "Beaufort Cipher",
             description: "The Beaufort cipher is a polyalphabetic substitution cipher, similar to Vigenère, but using a slightly different tableau and encryption mechanism (reciprocal).",
             link: "https://en.wikipedia.org/wiki/Beaufort_cipher",
-            tags: vec!["beaufort", "substitution", "decoder", "classic", "vigenere-variant"],
+            tags: vec!["beaufort", "substitution", "classic", "vigenere-variant"],
             popularity: 0.4,
             phantom: std::marker::PhantomData,
         }
@@ -55,9 +55,8 @@ impl Crack for Decoder<BeaufortDecoder> {
         let clean_text: String = text.chars().filter(|c| c.is_ascii_alphabetic()).collect();
         if clean_text.is_empty() { return results; }
 
-        // Increased sensitivity to High to avoid false positives like 'THerEwW2AN4tUrK='
-        // which can happen when input is actually Base64.
-        let checker_with_sensitivity = checker.with_sensitivity(Sensitivity::High);
+        // Use default sensitivity
+        let checker_with_sensitivity = checker;
 
         for key_length in 3..20 { // Check reasonable key lengths
              let key = break_beaufort(text, key_length);
