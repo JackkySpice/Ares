@@ -23,7 +23,7 @@ impl Crack for Decoder<SubstitutionGenericDecoder> {
         }
     }
 
-    fn crack(&self, text: &str, checker: &CheckerTypes, config: &Config) -> CrackResult {
+    fn crack(&self, text: &str, checker: &CheckerTypes, _config: &Config) -> CrackResult {
         trace!("Trying SubstitutionGenericDecoder with text {:?}", text);
         let mut results = CrackResult::new(self, text.to_string());
         let unique_symbols: Vec<char> = text.chars().collect::<HashSet<_>>().into_iter().collect();

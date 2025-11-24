@@ -246,7 +246,7 @@ fn success_result_to_cache(
         Err(_) => {
             cli_pretty_printing::warning(
                 "Stop time is less than start time. Clock may have gone backwards.",
-            &config);
+            config);
             -1
         }
     };
@@ -352,7 +352,7 @@ mod tests {
         let _test_db = TestDatabase::default();
         set_test_db_path();
 
-        let config = Config::default();
+        let _config = Config::default();
         perform_cracking("SGVscCBJIG5lZWQgc29tZWJvZHkh", crate::config::Config::default());
     }
 
@@ -361,7 +361,7 @@ mod tests {
         let _test_db = TestDatabase::default();
         set_test_db_path();
 
-        let config = Config::default();
+        let _config = Config::default();
         let result = perform_cracking("", crate::config::Config::default());
         assert!(result.is_none());
     }
@@ -371,7 +371,7 @@ mod tests {
         let _test_db = TestDatabase::default();
         set_test_db_path();
 
-        let config = Config::default();
+        let _config = Config::default();
         let result = perform_cracking("aGVsbG8gdGhlcmUgZ2VuZXJhbA==", crate::config::Config::default());
         assert!(result.is_some());
         assert!(result.unwrap().text[0] == "hello there general")
@@ -382,7 +382,7 @@ mod tests {
         let _test_db = TestDatabase::default();
         set_test_db_path();
 
-        let config = Config::default();
+        let _config = Config::default();
         let result = perform_cracking("192.168.0.1", crate::config::Config::default());
         // Since we are exiting early the path should be of length 1, which is 1 check (the Athena check)
         assert!(result.unwrap().path.len() == 1);
@@ -397,7 +397,7 @@ mod tests {
         let _test_db = TestDatabase::default();
         set_test_db_path();
 
-        let config = Config::default();
+        let _config = Config::default();
         let result = perform_cracking("Ebgngr zr 13 cynprf!", crate::config::Config::default());
         // We return None since the input is the plaintext
         assert!(result.unwrap().text[0] == "Rotate me 13 places!");
@@ -408,7 +408,7 @@ mod tests {
         let _test_db = TestDatabase::default();
         set_test_db_path();
 
-        let config = Config::default();
+        let _config = Config::default();
         let result = perform_cracking("Hello, World!", crate::config::Config::default());
         // We return None since the input is the plaintext
         let res_unwrapped = result.unwrap();

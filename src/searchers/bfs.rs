@@ -8,7 +8,6 @@ use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 
 use crate::DecoderResult;
-use crate::config::Config;
 
 /// Breadth first search is our search algorithm
 /// https://en.wikipedia.org/wiki/Breadth-first_search

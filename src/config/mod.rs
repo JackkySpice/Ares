@@ -1,7 +1,6 @@
 /// import general checker
 use lemmeknow::Identifier;
 use memmap2::Mmap;
-use once_cell::sync::OnceCell;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::fs::{self, File};
@@ -70,16 +69,6 @@ pub struct Config {
     /// Path to the enhanced detection model. If None, will use the default path.
     pub model_path: Option<String>,
 }
-
-/// Creates a default lemmeknow config
-const LEMMEKNOW_DEFAULT_CONFIG: Identifier = Identifier {
-    min_rarity: 0.0_f32,
-    max_rarity: 0.0_f32,
-    tags: vec![],
-    exclude_tags: vec![],
-    file_support: false,
-    boundaryless: false,
-};
 
 /// Convert Config fields into an Identifier
 fn make_identifier_from_config(config: &Config) -> Identifier {
