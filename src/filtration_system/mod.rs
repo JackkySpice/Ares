@@ -51,6 +51,8 @@ use crate::decoders::base32hex_decoder::Base32HexDecoder;
 use crate::decoders::affine_cipher::AffineCipherDecoder;
 use crate::decoders::beaufort_decoder::BeaufortDecoder;
 use crate::decoders::xor_decoder::XorDecoder;
+use crate::decoders::hash_crack_decoder::HashCrackDecoder;
+use crate::decoders::jwt_decoder::JwtDecoder;
 
 use log::trace;
 use rayon::prelude::*;
@@ -206,7 +208,8 @@ impl DecoderFilter {
 pub fn get_decoder_tagged_decoders(text_struct: &DecoderResult) -> Decoders {
     trace!("Getting decoder-tagged decoders");
     let filter = DecoderFilter::new().include_tag("decoder");
-    filter_decoders_by_tags(text_struct, &filter)
+    let decoders = filter_decoders_by_tags(text_struct, &filter);
+    decoders
 }
 
 /// Get decoders without the "decoder" tag
@@ -285,9 +288,13 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
     let affine = Decoder::<AffineCipherDecoder>::new();
     let beaufort = Decoder::<BeaufortDecoder>::new();
     let xor = Decoder::<XorDecoder>::new();
+    let hash_crack = Decoder::<HashCrackDecoder>::new();
+    let jwt = Decoder::<JwtDecoder>::new();
 
     Decoders {
         components: vec![
+            Box::new(hash_crack),
+            Box::new(jwt),
             Box::new(vigenere),
             Box::new(reversedecoder),
             Box::new(base64),

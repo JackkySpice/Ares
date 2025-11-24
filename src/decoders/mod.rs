@@ -92,6 +92,8 @@ pub mod base32hex_decoder;
 pub mod affine_cipher;
 pub mod beaufort_decoder;
 pub mod xor_decoder;
+pub mod hash_crack_decoder;
+pub mod jwt_decoder;
 
 use atbash_decoder::AtbashDecoder;
 use base32_decoder::Base32Decoder;
@@ -136,6 +138,8 @@ use base32hex_decoder::Base32HexDecoder;
 use affine_cipher::AffineCipherDecoder;
 use beaufort_decoder::BeaufortDecoder;
 use xor_decoder::XorDecoder;
+use hash_crack_decoder::HashCrackDecoder;
+use jwt_decoder::JwtDecoder;
 
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
@@ -221,6 +225,10 @@ pub enum DecoderType {
     BeaufortDecoder(beaufort_decoder::BeaufortDecoder),
     /// xor decoder
     XorDecoder(xor_decoder::XorDecoder),
+    /// hash crack decoder
+    HashCrackDecoder(hash_crack_decoder::HashCrackDecoder),
+    /// jwt decoder
+    JwtDecoder(jwt_decoder::JwtDecoder),
 }
 
 /// Wrapper struct to hold Decoders for DECODER_MAP
@@ -366,6 +374,14 @@ pub static DECODER_MAP: Lazy<HashMap<&str, DecoderBox>> = Lazy::new(|| {
         (
             "XOR",
             DecoderBox::new(Decoder::<XorDecoder>::new()),
+        ),
+        (
+            "HashCrack",
+            DecoderBox::new(Decoder::<HashCrackDecoder>::new()),
+        ),
+        (
+            "JWT",
+            DecoderBox::new(Decoder::<JwtDecoder>::new()),
         ),
     ])
 });

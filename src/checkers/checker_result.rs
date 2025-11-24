@@ -1,6 +1,7 @@
 use super::checker_type::Checker;
 
 /// The checkerResult struct is used to store the results of a checker.
+#[derive(Debug)]
 pub struct CheckResult {
     /// If our checkers return success, we change this bool to True
     pub is_identified: bool,
