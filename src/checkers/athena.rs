@@ -18,22 +18,27 @@ use super::{
 };
 
 // Static instances for Low sensitivity (default for Athena) to avoid repeated instantiation
+/// Regex Checker with Low Sensitivity
 static REGEX_LOW: Lazy<Checker<RegexChecker>> = Lazy::new(|| {
     Checker::<RegexChecker>::new().with_sensitivity(Sensitivity::Low)
 });
 
+/// Wordlist Checker with Low Sensitivity
 static WORDLIST_LOW: Lazy<Checker<WordlistChecker>> = Lazy::new(|| {
     Checker::<WordlistChecker>::new().with_sensitivity(Sensitivity::Low)
 });
 
+/// LemmeKnow Checker with Low Sensitivity
 static LEMMEKNOW_LOW: Lazy<Checker<LemmeKnow>> = Lazy::new(|| {
     Checker::<LemmeKnow>::new().with_sensitivity(Sensitivity::Low)
 });
 
+/// Password Checker with Low Sensitivity
 static PASSWORD_LOW: Lazy<Checker<PasswordChecker>> = Lazy::new(|| {
     Checker::<PasswordChecker>::new().with_sensitivity(Sensitivity::Low)
 });
 
+/// English Checker with Low Sensitivity
 static ENGLISH_LOW: Lazy<Checker<EnglishChecker>> = Lazy::new(|| {
     Checker::<EnglishChecker>::new().with_sensitivity(Sensitivity::Low)
 });
@@ -69,7 +74,7 @@ impl Check for Checker<Athena> {
             
             let regex_checker_temp;
             let regex_checker_ref: &Checker<RegexChecker> = if is_low {
-                &*REGEX_LOW
+                &REGEX_LOW
             } else {
                 regex_checker_temp = Checker::<RegexChecker>::new().with_sensitivity(self.sensitivity);
                 &regex_checker_temp
@@ -96,7 +101,7 @@ impl Check for Checker<Athena> {
                 
                 let wordlist_checker_temp;
                 let wordlist_checker_ref: &Checker<WordlistChecker> = if is_low {
-                    &*WORDLIST_LOW
+                    &WORDLIST_LOW
                 } else {
                     wordlist_checker_temp = Checker::<WordlistChecker>::new().with_sensitivity(self.sensitivity);
                     &wordlist_checker_temp
@@ -127,7 +132,7 @@ impl Check for Checker<Athena> {
             // LemmeKnow Checker
             let lemmeknow_temp;
             let lemmeknow_ref: &Checker<LemmeKnow> = if is_low {
-                &*LEMMEKNOW_LOW
+                &LEMMEKNOW_LOW
             } else {
                 lemmeknow_temp = Checker::<LemmeKnow>::new().with_sensitivity(self.sensitivity);
                 &lemmeknow_temp
@@ -152,7 +157,7 @@ impl Check for Checker<Athena> {
             // Password Checker
             let password_temp;
             let password_ref: &Checker<PasswordChecker> = if is_low {
-                &*PASSWORD_LOW
+                &PASSWORD_LOW
             } else {
                 password_temp = Checker::<PasswordChecker>::new().with_sensitivity(self.sensitivity);
                 &password_temp
@@ -176,7 +181,7 @@ impl Check for Checker<Athena> {
             // English Checker
             let english_temp;
             let english_ref: &Checker<EnglishChecker> = if is_low {
-                &*ENGLISH_LOW
+                &ENGLISH_LOW
             } else {
                 english_temp = Checker::<EnglishChecker>::new().with_sensitivity(self.sensitivity);
                 &english_temp

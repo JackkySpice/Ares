@@ -1,7 +1,6 @@
 use ares::checkers::athena::Athena;
 use ares::checkers::checker_type::{Check, Checker};
 use ares::checkers::CheckerTypes;
-use ares::config::{set_global_config, Config};
 use ares::decoders::{
     base32_decoder::Base32Decoder,
     base58_bitcoin_decoder::Base58BitcoinDecoder,
@@ -11,14 +10,16 @@ use ares::decoders::{
     hexadecimal_decoder::HexadecimalDecoder,
     interface::{Crack, Decoder},
 };
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
+use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use env_logger::Builder;
 use log::LevelFilter;
+use std::hint::black_box;
 use std::time::Duration;
 
 // Test cases for different decoders
 struct DecoderTestCase<'a> {
     encoded: &'a str,
+    #[allow(dead_code)]
     expected: &'a str,
     description: &'a str,
 }
@@ -73,13 +74,7 @@ pub fn benchmark_decoders(c: &mut Criterion) {
     // Initialize logger with only error level to suppress debug messages
     let mut builder = Builder::new();
     builder.filter_level(LevelFilter::Error);
-    builder.init();
-
-    // Setup global config to suppress output
-    let mut config = Config::default();
-    config.api_mode = true;
-    config.verbose = 0;
-    set_global_config(config);
+    let _ = builder.try_init();
 
     // Create a benchmark group with appropriate measurement time
     let mut group = c.benchmark_group("decoder_performance");
@@ -144,7 +139,7 @@ fn benchmark_decoder<T>(
                     let _test_db = ares::TestDatabase::default();
                     ares::set_test_db_path();
                 },
-                |_| decoder.crack(black_box(encoded), checker),
+                |_| decoder.crack(black_box(encoded), checker, &ares::config::Config::default()),
                 criterion::BatchSize::SmallInput,
             )
         });
