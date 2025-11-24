@@ -17,7 +17,7 @@
 
 `ares` is an automated decoding tool, written in Rust. It is designed to be the next generation of decoding tools, significantly faster and more efficient than its predecessor, [Ciphey](https://github.com/ciphey/ciphey).
 
-✨ You can read more about Ares here https://skerritt.blog/introducing-ciphey/ (Historical context) ✨
+✨ You can read more about the project history here https://skerritt.blog/introducing-ciphey/ ✨
 
 # How to Use
 
@@ -32,8 +32,8 @@ cargo install ares
 Or build from source:
 
 ```bash
-git clone https://github.com/bee-san/ares
-cd ares
+git clone https://github.com/JackkySpice/Ares
+cd Ares
 cargo build --release
 ```
 

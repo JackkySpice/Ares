@@ -1,4 +1,4 @@
-//! Ares is an automatic decoding and cracking tool. https://github.com/bee-san/ares
+//! Ares is an automatic decoding and cracking tool. https://github.com/JackkySpice/Ares
 // Warns in case we forget to include documentation
 #![warn(
     missing_docs,
