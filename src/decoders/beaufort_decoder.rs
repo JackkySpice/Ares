@@ -2,14 +2,11 @@
 //! Performs error handling and returns a string
 
 use crate::checkers::CheckerTypes;
-use crate::decoders::interface::check_string_success;
 use crate::decoders::crack_results::CrackResult;
 use crate::decoders::interface::Crack;
 use crate::decoders::interface::Decoder;
-use gibberish_or_not::Sensitivity;
+use log::trace;
 use once_cell::sync::Lazy;
-
-use log::{debug, info, trace};
 
 /// English bigrams for determining fitness (reused from Vigenere/shared location conceptually)
 /// We use include_str! to embed the file content at compile time for portability.
@@ -34,6 +31,10 @@ static ENGLISH_BIGRAMS: Lazy<Vec<Vec<i64>>> = Lazy::new(|| {
     bigrams_vec
 });
 
+/// The Beaufort Cipher decoder, call:
+/// `let beaufort_decoder = Decoder::<BeaufortDecoder>::new()` to create a new instance
+/// And then call:
+/// `result = beaufort_decoder.crack(input)` to decode a Beaufort Cipher string
 pub struct BeaufortDecoder;
 
 impl Crack for Decoder<BeaufortDecoder> {
@@ -84,6 +85,7 @@ impl Crack for Decoder<BeaufortDecoder> {
 
 // Beaufort Decryption: M = (K - C) mod 26
 // Vigenere was M = (C - K) mod 26
+/// Helper function to decrypt beaufort cipher
 fn decrypt_beaufort(text: &str, key: &str) -> String {
     let key_bytes: Vec<u8> = key.bytes().collect();
     let mut result = String::with_capacity(text.len());
@@ -109,6 +111,7 @@ fn decrypt_beaufort(text: &str, key: &str) -> String {
     result
 }
 
+/// Helper function to break beaufort cipher
 fn break_beaufort(text: &str, key_length: usize) -> String {
     // Similar to Vigenere breaker but optimized for Beaufort fitness
     // We assume key length is correct and try to find best key char for each position
@@ -153,8 +156,8 @@ fn break_beaufort(text: &str, key_length: usize) -> String {
                     let c2 = cipher_text[i+1] as i32;
 
                     // M = (K - C) mod 26
-                    let m1 = (k1 as i32 - c1).rem_euclid(26);
-                    let m2 = (k2 as i32 - c2).rem_euclid(26);
+                    let m1 = (k1 - c1).rem_euclid(26);
+                    let m2 = (k2 - c2).rem_euclid(26);
 
                     fitness += ENGLISH_BIGRAMS[m1 as usize][m2 as usize];
                 }

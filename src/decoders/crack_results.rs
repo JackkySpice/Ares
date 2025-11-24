@@ -71,6 +71,7 @@ impl<'de> Deserialize<'de> for CrackResult {
     {
         #[allow(unused)]
         #[derive(Deserialize)]
+        /// Temporary struct for deserializing CrackResult to handle missing fields or custom logic
         struct TempCrackResult {
             /// Success status of the CrackResult
             pub success: bool,

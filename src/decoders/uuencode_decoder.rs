@@ -6,9 +6,12 @@ use crate::decoders::interface::check_string_success;
 use crate::decoders::crack_results::CrackResult;
 use crate::decoders::interface::Crack;
 use crate::decoders::interface::Decoder;
+use log::trace;
 
-use log::{debug, info, trace};
-
+/// The UUEncode decoder, call:
+/// `let uuencode_decoder = Decoder::<UUEncodeDecoder>::new()` to create a new instance
+/// And then call:
+/// `result = uuencode_decoder.crack(input)` to decode a UUEncode string
 pub struct UUEncodeDecoder;
 
 impl Crack for Decoder<UUEncodeDecoder> {
@@ -55,10 +58,11 @@ impl Crack for Decoder<UUEncodeDecoder> {
     fn get_link(&self) -> &str { self.link }
 }
 
+/// Helper function to decode uuencoded string
 fn decode_uuencode_no_error_handling(text: &str) -> Option<String> {
     // Basic body decoding if no header
     // If header exists, strip it.
-    let mut lines = text.lines();
+    let lines = text.lines();
     let mut body_lines = Vec::new();
     let mut started = false;
 
@@ -72,10 +76,8 @@ fn decode_uuencode_no_error_handling(text: &str) -> Option<String> {
             if line == "end" {
                 break;
             }
-            if started {
-                if !line.is_empty() {
-                    body_lines.push(line);
-                }
+            if started && !line.is_empty() {
+                body_lines.push(line);
             }
         }
     } else {
@@ -99,7 +101,7 @@ fn decode_uuencode_no_error_handling(text: &str) -> Option<String> {
 
         // First char is length
         let len_char = bytes[0];
-        if len_char < 32 || len_char > 96 { return None; } // Basic range check
+        if !(32..=96).contains(&len_char) { return None; } // Basic range check
         let length = (len_char - 32) as usize;
         if length == 0 { continue; }
 
@@ -115,7 +117,7 @@ fn decode_uuencode_no_error_handling(text: &str) -> Option<String> {
              // But sometimes space is replaced by ` for obscure reasons.
              // (c - 32) & 0x3F
 
-             let c0 = if chunk.len() > 0 { (chunk[0].wrapping_sub(32)) & 0x3F } else { 0 };
+             let c0 = if !chunk.is_empty() { (chunk[0].wrapping_sub(32)) & 0x3F } else { 0 };
              let c1 = if chunk.len() > 1 { (chunk[1].wrapping_sub(32)) & 0x3F } else { 0 };
              let c2 = if chunk.len() > 2 { (chunk[2].wrapping_sub(32)) & 0x3F } else { 0 };
              let c3 = if chunk.len() > 3 { (chunk[3].wrapping_sub(32)) & 0x3F } else { 0 };

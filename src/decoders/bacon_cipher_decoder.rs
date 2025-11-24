@@ -12,9 +12,12 @@ use crate::decoders::interface::check_string_success;
 use crate::decoders::crack_results::CrackResult;
 use crate::decoders::interface::Crack;
 use crate::decoders::interface::Decoder;
+use log::trace;
 
-use log::{debug, info, trace};
-
+/// The Bacon Cipher decoder, call:
+/// `let bacon_cipher_decoder = Decoder::<BaconCipherDecoder>::new()` to create a new instance
+/// And then call:
+/// `result = bacon_cipher_decoder.crack(input)` to decode a Bacon Cipher string
 pub struct BaconCipherDecoder;
 
 impl Crack for Decoder<BaconCipherDecoder> {
@@ -71,6 +74,7 @@ impl Crack for Decoder<BaconCipherDecoder> {
     fn get_link(&self) -> &str { self.link }
 }
 
+/// Helper function to decode bacon cipher
 fn decode_bacon(text: &str, distinct_alphabet: bool) -> Option<String> {
     // 1. Normalize text to A and B
     // Bacon cipher usually uses two types.

@@ -177,6 +177,9 @@ pub fn get_config_file_path() -> std::path::PathBuf {
 /// This function will panic if:
 /// - The config cannot be serialized to TOML
 /// - The config file path cannot be determined (see `get_config_file_path`)
+///
+/// # Errors
+/// Returns an error if the file cannot be created or written to.
 pub fn create_default_config_file() -> std::io::Result<()> {
     let config = Config::default();
     let toml_string = toml::to_string_pretty(&config).expect("Could not serialize config");
@@ -250,6 +253,9 @@ fn parse_toml_with_unknown_keys(contents: &str) -> Config {
 /// * The file cannot be memory-mapped
 /// * The file contains invalid UTF-8 characters
 ///
+/// # Panics
+/// Panics if the file contains invalid UTF-8 when using memory mapping.
+///
 /// # Safety
 /// This implementation uses unsafe code in two places:
 /// 1. Memory mapping (unsafe { Mmap::map(&file) }):
@@ -274,12 +280,10 @@ pub fn load_wordlist<P: AsRef<Path>>(path: P) -> io::Result<HashSet<String>> {
         let reader = BufReader::new(file);
         let mut wordlist = HashSet::new();
 
-        for line in reader.lines() {
-            if let Ok(word) = line {
-                let trimmed = word.trim().to_string();
-                if !trimmed.is_empty() {
-                    wordlist.insert(trimmed);
-                }
+        for word in reader.lines().map_while(Result::ok) {
+            let trimmed = word.trim().to_string();
+            if !trimmed.is_empty() {
+                wordlist.insert(trimmed);
             }
         }
 
@@ -315,14 +319,14 @@ pub fn get_config_file_into_struct() -> Config {
     if !path.exists() {
         // First run - get user preferences
         let first_run_config = crate::cli::run_first_time_setup();
-        let mut config = Config::default();
-
-        // Extract color scheme values
-        config.colourscheme = first_run_config
+        let mut config = Config {
+            colourscheme: first_run_config
             .iter()
             .filter(|(k, _)| !k.starts_with("wordlist") && *k != "timeout")
             .map(|(k, v)| (k.clone(), v.clone()))
-            .collect();
+            .collect(),
+            ..Default::default()
+        };
 
         // Set timeout if present
         if let Some(timeout) = first_run_config.get("timeout") {

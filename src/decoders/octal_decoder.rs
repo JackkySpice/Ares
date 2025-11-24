@@ -9,6 +9,10 @@ use crate::decoders::interface::Decoder;
 
 use log::{debug, info, trace};
 
+/// The Octal decoder, call:
+/// `let octal_decoder = Decoder::<OctalDecoder>::new()` to create a new instance
+/// And then call:
+/// `result = octal_decoder.crack(input)` to decode an Octal string
 pub struct OctalDecoder;
 
 impl Crack for Decoder<OctalDecoder> {
@@ -53,6 +57,7 @@ impl Crack for Decoder<OctalDecoder> {
     fn get_link(&self) -> &str { self.link }
 }
 
+/// Helper function to decode octal string
 fn decode_octal_no_error_handling(text: &str) -> Option<String> {
     if text.is_empty() { return None; }
 
@@ -73,7 +78,7 @@ fn decode_octal_no_error_handling(text: &str) -> Option<String> {
     } else {
         // Try chunks of 3 if length is divisible by 3 and looks like octal
         let input = text.replace('\\', ""); // basic cleanup
-        if input.len() > 0 && input.len() % 3 == 0 {
+        if !input.is_empty() && input.len() % 3 == 0 {
              let chars: Vec<char> = input.chars().collect();
              for chunk in chars.chunks(3) {
                  let s: String = chunk.iter().collect();
