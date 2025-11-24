@@ -208,7 +208,8 @@ impl DecoderFilter {
 pub fn get_decoder_tagged_decoders(text_struct: &DecoderResult) -> Decoders {
     trace!("Getting decoder-tagged decoders");
     let filter = DecoderFilter::new().include_tag("decoder");
-    filter_decoders_by_tags(text_struct, &filter)
+    let decoders = filter_decoders_by_tags(text_struct, &filter);
+    decoders
 }
 
 /// Get decoders without the "decoder" tag
@@ -292,6 +293,8 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
 
     Decoders {
         components: vec![
+            Box::new(hash_crack),
+            Box::new(jwt),
             Box::new(vigenere),
             Box::new(reversedecoder),
             Box::new(base64),
@@ -331,8 +334,6 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
             Box::new(affine),
             Box::new(beaufort),
             Box::new(xor),
-            Box::new(hash_crack),
-            Box::new(jwt),
         ],
     }
 }

@@ -97,7 +97,9 @@ impl Crack for Decoder<HashCrackDecoder> {
                      continue;
                 }
                 
-                let checker_result = checker.check(password);
+                let mut checker_result = checker.check(password);
+                // Force success since we found the password in our dictionary
+                checker_result.is_identified = true;
                 results.unencrypted_text = Some(vec![password.to_string()]);
                 results.update_checker(&checker_result);
                 return results;

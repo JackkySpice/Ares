@@ -51,13 +51,15 @@ impl Crack for Decoder<JwtDecoder> {
             if header_json.is_some() && payload_json.is_some() {
                 debug!("JWT decoded successfully");
                 let decoded = format!("Header: {}\nPayload: {}", header, payload);
-                
+
                 // We don't check string success strictly because JSON might not be "human readable" 
                 // in the sense of a sentence, but it is structured. 
                 // However, we should check if the checker accepts it or if we just force it.
                 // Usually JWT content is interesting enough to return.
                 
-                let checker_result = checker.check(&decoded);
+                let mut checker_result = checker.check(&decoded);
+                // Force success since we successfully decoded a JWT structure
+                checker_result.is_identified = true;
                 results.unencrypted_text = Some(vec![decoded]);
                 results.update_checker(&checker_result);
                 return results;
