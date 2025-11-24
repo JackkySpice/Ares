@@ -143,7 +143,7 @@ impl Crack for Decoder<VigenereDecoder> {
 fn break_vigenere(text: &str, key_length: usize) -> String {
     let mut cipher_text: Vec<usize> = Vec::new();
     for c in text.chars() {
-        if c.is_alphabetic() {
+        if c.is_ascii_alphabetic() {
             cipher_text.push(((c.to_ascii_uppercase() as u8) - b'A') as usize);
         }
     }

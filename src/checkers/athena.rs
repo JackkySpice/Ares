@@ -30,7 +30,7 @@ impl Check for Checker<Athena> {
             expected_runtime: 0.01,
             popularity: 1.0,
             lemmeknow_config: Identifier::default(),
-            sensitivity: Sensitivity::Medium, // Default to Medium sensitivity
+            sensitivity: Sensitivity::Low, // Default to Low sensitivity to reduce false positives
             enhanced_detector: None,
             _phantom: std::marker::PhantomData,
         }
