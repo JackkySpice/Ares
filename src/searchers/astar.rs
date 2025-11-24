@@ -54,7 +54,8 @@ use crate::checkers::checker_type::{Check, Checker};
 use crate::checkers::CheckerTypes;
 use crate::config::Config;
 use crate::searchers::helper_functions::{
-    calculate_string_worth, generate_heuristic, update_decoder_stats, check_if_string_cant_be_decoded
+    calculate_string_worth, check_if_string_cant_be_decoded, generate_heuristic,
+    update_decoder_stats,
 };
 use crate::storage::wait_athena_storage;
 use crate::DecoderResult;
@@ -72,13 +73,13 @@ const MAX_DEPTH: u32 = 100;
 const PARALLEL_BATCH_SIZE: usize = 10;
 
 /// Calculate a hash for a string to use in the seen_strings set
-fn calculate_hash(text: &str) -> String {
+fn calculate_hash(text: &str) -> u64 {
     use std::collections::hash_map::DefaultHasher;
     use std::hash::{Hash, Hasher};
 
     let mut hasher = DefaultHasher::new();
     text.hash(&mut hasher);
-    hasher.finish().to_string()
+    hasher.finish()
 }
 
 /// A* search node with priority based on f = g + h
@@ -194,10 +195,11 @@ impl ThreadSafePriorityQueue {
 /// Expands a single node and returns a vector of new nodes
 fn expand_node(
     current_node: &AStarNode,
-    seen_strings: &DashSet<String>,
+    seen_strings: &DashSet<u64>,
     stop: &Arc<AtomicBool>,
     _prune_threshold: usize,
     config: &Config,
+    checker: &CheckerTypes,
 ) -> Vec<AStarNode> {
     let mut new_nodes = Vec::new();
 
@@ -242,8 +244,6 @@ fn expand_node(
             return new_nodes;
         }
 
-        let athena_checker = Checker::<Athena>::new();
-        let checker = CheckerTypes::CheckAthena(athena_checker);
         // since we only have decoders with the same name
         // we are cheating and just run that one decoder lol
         let decoder_results = decoders.run(&current_node.state.text[0], checker, config);
@@ -373,9 +373,7 @@ fn expand_node(
             }
 
             // Run the decoder
-            let athena_checker = Checker::<Athena>::new();
-            let checker = CheckerTypes::CheckAthena(athena_checker);
-            let result = decoder.crack(&current_node.state.text[0], &checker, config);
+            let result = decoder.crack(&current_node.state.text[0], checker, config);
 
             // Process the result
             if let Some(decoded_text) = &result.unencrypted_text {
@@ -499,6 +497,10 @@ pub fn astar(
     let curr_depth = Arc::new(AtomicU32::new(1));
     let prune_threshold = Arc::new(AtomicUsize::new(INITIAL_PRUNE_THRESHOLD));
 
+    // Create Athena checker once to avoid repeated instantiation
+    let athena_checker = Checker::<Athena>::new();
+    let checker = CheckerTypes::CheckAthena(athena_checker);
+
     // Main A* loop
     while !open_set.is_empty() && !stop.load(AtomicOrdering::Relaxed) {
         trace!(
@@ -523,6 +525,7 @@ pub fn astar(
                     &stop,
                     prune_threshold.load(AtomicOrdering::Relaxed),
                     &config,
+                    &checker,
                 )
             })
             .collect();
