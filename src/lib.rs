@@ -442,4 +442,5 @@ mod tests {
         // Therefore we return with the default decoder
         assert!(res_unwrapped.path[0].decoder == "Default decoder");
     }
+
 }

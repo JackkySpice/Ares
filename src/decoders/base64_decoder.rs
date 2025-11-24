@@ -260,4 +260,16 @@ mod tests {
             "Failed to decode URL-safe Base64"
         );
     }
+
+    #[test]
+    fn test_base64_decoding_with_stripped_padding() {
+        // "hello" -> "aGVsbG8="
+        // stripped -> "aGVsbG8"
+        let base64_decoder = Decoder::<Base64Decoder>::new();
+        let checker = get_athena_checker();
+
+        let result = base64_decoder.crack("aGVsbG8", &checker);
+        assert!(result.unencrypted_text.is_some());
+        assert_eq!(result.unencrypted_text.unwrap()[0], "hello");
+    }
 }
