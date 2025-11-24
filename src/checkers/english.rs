@@ -31,16 +31,19 @@ impl Check for Checker<EnglishChecker> {
 
         // Get config to check if enhanced detection is enabled
         let is_enhanced = config.enhanced_detection;
+        
+        let is_gibberish_result = if is_enhanced {
+            !is_gibberish(&text, Sensitivity::High)
+        } else {
+            !is_gibberish(&text, self.sensitivity)
+        };
+
+        log::trace!("EnglishChecker: Checking '{}'. Normalized: '{}'. Sensitivity: {:?}. Is Identified: {}", 
+            text, text, self.sensitivity, is_gibberish_result);
 
         let mut result = CheckResult {
             // Use a more sensitive setting if enhanced detection is enabled
-            is_identified: if is_enhanced {
-                // When enhanced detection is enabled, use a more sensitive setting
-                // This is a simple approximation since we don't have the actual BERT model
-                !is_gibberish(&text, Sensitivity::High)
-            } else {
-                !is_gibberish(&text, self.sensitivity)
-            },
+            is_identified: is_gibberish_result,
             text: text.to_string(),
             checker_name: self.name,
             checker_description: self.description,

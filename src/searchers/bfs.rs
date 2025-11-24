@@ -36,23 +36,28 @@ pub fn bfs(input: String, result_sender: Sender<Option<DecoderResult>>, stop: Ar
             match res {
                 // if it's Break variant, we have cracked the text successfully
                 // so just stop processing further.
-                MyResults::Break(res) => {
-                    let mut decoders_used = current_string.path;
-                    let text = res.unencrypted_text.clone().unwrap_or_default();
-                    decoders_used.push(res);
-                    let result_text = DecoderResult {
-                        text,
-                        path: decoders_used,
-                    };
+                MyResults::Break(results) => {
+                    if let Some(res) = results.first() {
+                        let mut decoders_used = current_string.path;
+                        let text = res.unencrypted_text.clone().unwrap_or_default();
+                        decoders_used.push(res.clone());
+                        let result_text = DecoderResult {
+                            text,
+                            path: decoders_used,
+                        };
 
-                    decoded_how_many_times(curr_depth, &config);
-                    result_sender
-                        .send(Some(result_text))
-                        .expect("Should succesfully send the result");
+                        decoded_how_many_times(curr_depth, &config);
+                        result_sender
+                            .send(Some(result_text))
+                            .expect("Should succesfully send the result");
 
-                    // stop further iterations
-                    stop.store(true, std::sync::atomic::Ordering::Relaxed);
-                    None // short-circuits the iterator
+                        // stop further iterations
+                        stop.store(true, std::sync::atomic::Ordering::Relaxed);
+                        None // short-circuits the iterator
+                    } else {
+                        // Should not happen for Break, but handle gracefully
+                        Some(())
+                    }
                 }
                 MyResults::Continue(results_vec) => {
                     new_strings.extend(results_vec.into_iter().flat_map(|mut r| {
@@ -95,7 +100,12 @@ pub fn bfs(input: String, result_sender: Sender<Option<DecoderResult>>, stop: Ar
 /// If this returns False it will not attempt to decode that string
 #[allow(dead_code)]
 fn check_if_string_cant_be_decoded(text: &str) -> bool {
-    text.len() <= 2
+    // Check for strings that are too short
+    if text.is_empty() {
+        return true;
+    }
+    // Allow short strings like "hi"
+    false
 }
 
 #[cfg(test)]
