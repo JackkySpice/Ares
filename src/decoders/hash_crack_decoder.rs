@@ -26,7 +26,7 @@ impl Crack for Decoder<HashCrackDecoder> {
             name: "HashCrack",
             description: "Cracks hashes (MD5, SHA1, SHA256) using a dictionary attack.",
             link: "https://en.wikipedia.org/wiki/Password_cracking",
-            tags: vec!["hash", "md5", "sha1", "sha256", "cracker", "dictionary"],
+            tags: vec!["hash", "md5", "sha1", "sha256", "cracker", "dictionary", "decoder"],
             popularity: 0.1, // Run last usually, or if detected
             phantom: std::marker::PhantomData,
         }
