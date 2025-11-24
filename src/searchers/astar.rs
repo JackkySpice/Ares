@@ -401,24 +401,22 @@ fn expand_node(
             let result = decoder.crack(&current_node.state.text[0], checker, config);
 
             // Process the result
-            if let Some(decoded_text) = &result.unencrypted_text {
-                if let Some(first_text) = decoded_text.first() {
+            if let Some(decoded_text_vec) = &result.unencrypted_text {
+                let mut any_valid = false;
+                for text in decoded_text_vec {
                     // Skip if text is empty
-                    if first_text.is_empty() {
-                        update_decoder_stats(decoder.get_name(), false);
+                    if text.is_empty() {
                         continue;
                     }
 
                     // Check if the string cannot be decoded (aggressive pruning)
-                    if check_if_string_cant_be_decoded(first_text) {
-                        update_decoder_stats(decoder.get_name(), false);
+                    if check_if_string_cant_be_decoded(text) {
                         continue;
                     }
 
                     // Check if we've seen this string before
-                    let text_hash = calculate_hash(first_text);
+                    let text_hash = calculate_hash(text);
                     if !seen_strings.insert(text_hash) {
-                        update_decoder_stats(decoder.get_name(), false);
                         continue;
                     }
 
@@ -428,12 +426,12 @@ fn expand_node(
 
                     // Create new node
                     let cost = current_node.cost + 1;
-                    let heuristic = generate_heuristic(first_text, &decoders_used, &None);
+                    let heuristic = generate_heuristic(text, &decoders_used, &None);
                     let total_cost = cost as f32 + heuristic;
 
                     let new_node = AStarNode {
                         state: DecoderResult {
-                            text: decoded_text.clone(),
+                            text: vec![text.clone()],
                             path: decoders_used,
                         },
                         cost,
@@ -444,9 +442,13 @@ fn expand_node(
 
                     // Add to new nodes
                     new_nodes.push(new_node);
+                    any_valid = true;
+                }
 
-                    // Update decoder stats
+                if any_valid {
                     update_decoder_stats(decoder.get_name(), true);
+                } else {
+                    update_decoder_stats(decoder.get_name(), false);
                 }
             } else {
                 // Update decoder stats for failed decoding
