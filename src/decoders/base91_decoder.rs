@@ -4,6 +4,7 @@
 //! `result.is_some()` to see if it returned okay.
 
 use crate::checkers::CheckerTypes;
+use crate::config::Config;
 use crate::decoders::interface::check_string_success;
 
 use super::crack_results::CrackResult;
@@ -26,7 +27,7 @@ use log::{debug, info, trace};
 /// let athena_checker = Checker::<Athena>::new();
 /// let checker = CheckerTypes::CheckAthena(athena_checker);
 ///
-/// let result = decode_base91.crack("TPwJh>Io2Tv!lE", &checker).unencrypted_text;
+/// let result = decode_base91.crack("TPwJh>Io2Tv!lE", &checker, &ares::config::Config::default()).unencrypted_text;
 /// assert!(result.is_some());
 /// assert_eq!(result.unwrap()[0], "hello world");
 /// ```
@@ -47,7 +48,7 @@ impl Crack for Decoder<Base91Decoder> {
     /// This function does the actual decoding
     /// It returns an Option<string> if it was successful
     /// Else the Option returns nothing and the error is logged in Trace
-    fn crack(&self, text: &str, checker: &CheckerTypes) -> CrackResult {
+    fn crack(&self, text: &str, checker: &CheckerTypes, config: &Config) -> CrackResult {
         trace!("Trying Base91 with text {:?}", text);
         let decoded_text = decode_base91_no_error_handling(text);
         let mut results = CrackResult::new(self, text.to_string());
@@ -66,7 +67,7 @@ impl Crack for Decoder<Base91Decoder> {
             return results;
         }
 
-        let checker_result = checker.check(&decoded_text);
+        let checker_result = checker.check(&decoded_text, config);
         results.unencrypted_text = Some(vec![decoded_text]);
 
         results.update_checker(&checker_result);
@@ -120,7 +121,7 @@ mod tests {
     #[test]
     fn successful_decoding() {
         let base91_decoder = Decoder::<Base91Decoder>::new();
-        let result = base91_decoder.crack("TPwJh>Io2Tv!lE", &get_athena_checker());
+        let result = base91_decoder.crack("TPwJh>Io2Tv!lE", &get_athena_checker(), &crate::config::Config::default());
         assert_eq!(result.unencrypted_text.unwrap()[0], "hello world");
     }
 
@@ -130,7 +131,7 @@ mod tests {
         // but returns False on check_string_success
         let base91_decoder = Decoder::<Base91Decoder>::new();
         let result = base91_decoder
-            .crack("", &get_athena_checker())
+            .crack("", &get_athena_checker(), &crate::config::Config::default())
             .unencrypted_text;
         assert!(result.is_none());
     }
@@ -139,7 +140,7 @@ mod tests {
     fn base91_decode_handles_panics() {
         let base91_decoder = Decoder::<Base91Decoder>::new();
         let result = base91_decoder
-            .crack("😈", &get_athena_checker())
+            .crack("😈", &get_athena_checker(), &crate::config::Config::default())
             .unencrypted_text;
         assert!(result.is_none());
     }
@@ -148,7 +149,7 @@ mod tests {
     fn base91_handle_panic_if_empty_string() {
         let base91_decoder = Decoder::<Base91Decoder>::new();
         let result = base91_decoder
-            .crack("", &get_athena_checker())
+            .crack("", &get_athena_checker(), &crate::config::Config::default())
             .unencrypted_text;
         assert!(result.is_none());
     }
@@ -162,7 +163,7 @@ mod tests {
         // https://gchq.github.io/CyberChef/#recipe=From_Base91('A-Za-z0-9%2B/%3D',true)&input=aGVsbG8gZ29vZCBkYXkh
         let base91_decoder = Decoder::<Base91Decoder>::new();
         let result = base91_decoder
-            .crack("hello good day!", &get_athena_checker())
+            .crack("hello good day!", &get_athena_checker(), &crate::config::Config::default())
             .unencrypted_text;
         assert!(result.is_some());
     }
@@ -171,7 +172,7 @@ mod tests {
     fn base91_handle_panic_if_emoji() {
         let base91_decoder = Decoder::<Base91Decoder>::new();
         let result = base91_decoder
-            .crack("😂", &get_athena_checker())
+            .crack("😂", &get_athena_checker(), &crate::config::Config::default())
             .unencrypted_text;
         assert!(result.is_none());
     }

@@ -3,6 +3,7 @@
 //! Call xor_decoder.crack to use.
 
 use crate::checkers::CheckerTypes;
+use crate::config::Config;
 use crate::decoders::interface::check_string_success;
 use gibberish_or_not::Sensitivity;
 
@@ -20,8 +21,7 @@ pub struct XorDecoder;
 impl Crack for Decoder<XorDecoder> {
     fn new() -> Decoder<XorDecoder> {
         Decoder {
-            name: "XOR",
-            description: "XOR cipher (exclusive OR) is a simple additive cipher. This decoder attempts to crack single-byte XOR by brute-forcing all 256 possible keys.",
+            name: "XOR", description: "XOR cipher (exclusive OR, &crate::config::Config::default()) is a simple additive cipher. This decoder attempts to crack single-byte XOR by brute-forcing all 256 possible keys.",
             link: "https://en.wikipedia.org/wiki/XOR_cipher",
             tags: vec!["xor", "decryption", "classic", "brute-force"],
             popularity: 0.7,
@@ -30,7 +30,7 @@ impl Crack for Decoder<XorDecoder> {
     }
 
     /// This function does the actual decoding
-    fn crack(&self, text: &str, checker: &CheckerTypes) -> CrackResult {
+    fn crack(&self, text: &str, checker: &CheckerTypes, config: &Config) -> CrackResult {
         trace!("Trying XOR Cipher with text {:?}", text);
         let mut results = CrackResult::new(self, text.to_string());
         let mut decoded_strings = Vec::new();
@@ -57,7 +57,7 @@ impl Crack for Decoder<XorDecoder> {
                     continue;
                 }
 
-                let checker_result = checker_with_sensitivity.check(borrowed_decoded_text);
+                let checker_result = checker_with_sensitivity.check(borrowed_decoded_text, config);
                 // If checkers return true, exit early with the correct result
                 if checker_result.is_identified {
                     trace!("Found a match with XOR key {}", key);
@@ -124,7 +124,7 @@ mod tests {
         // Let's try XOR with a key that keeps it ASCII. 
         // 'A' (65) XOR 32 (space) = 'a' (97). Case flip.
         // "HELLO" XOR 32 = "hello"
-        let result = xor_decoder.crack("HELLO", &get_athena_checker());
+        let result = xor_decoder.crack("HELLO", &get_athena_checker(), &crate::config::Config::default());
         assert!(result.unencrypted_text.is_some());
         let texts = result.unencrypted_text.unwrap();
         assert!(texts.contains(&"hello".to_string()));
@@ -134,7 +134,7 @@ mod tests {
     fn xor_identified_test() {
         let xor_decoder = Decoder::<XorDecoder>::new();
         // "hello" XOR 1 = "idmmn"
-        let result = xor_decoder.crack("idmmn", &get_athena_checker());
+        let result = xor_decoder.crack("idmmn", &get_athena_checker(), &crate::config::Config::default());
         assert!(result.unencrypted_text.is_some());
         // Athena should identify "hello"
         // But "hello" is short. "hello world" is better.

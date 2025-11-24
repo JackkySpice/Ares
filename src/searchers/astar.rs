@@ -52,7 +52,7 @@ use rayon::prelude::*;
 use crate::checkers::athena::Athena;
 use crate::checkers::checker_type::{Check, Checker};
 use crate::checkers::CheckerTypes;
-use crate::config::get_config;
+use crate::config::Config;
 use crate::searchers::helper_functions::{
     calculate_string_worth, generate_heuristic, update_decoder_stats, check_if_string_cant_be_decoded
 };
@@ -197,6 +197,7 @@ fn expand_node(
     seen_strings: &DashSet<String>,
     stop: &Arc<AtomicBool>,
     _prune_threshold: usize,
+    config: &Config,
 ) -> Vec<AStarNode> {
     let mut new_nodes = Vec::new();
 
@@ -245,7 +246,7 @@ fn expand_node(
         let checker = CheckerTypes::CheckAthena(athena_checker);
         // since we only have decoders with the same name
         // we are cheating and just run that one decoder lol
-        let decoder_results = decoders.run(&current_node.state.text[0], checker);
+        let decoder_results = decoders.run(&current_node.state.text[0], checker, config);
 
         // Process decoder results
         match decoder_results {
@@ -374,7 +375,7 @@ fn expand_node(
             // Run the decoder
             let athena_checker = Checker::<Athena>::new();
             let checker = CheckerTypes::CheckAthena(athena_checker);
-            let result = decoder.crack(&current_node.state.text[0], &checker);
+            let result = decoder.crack(&current_node.state.text[0], &checker, config);
 
             // Process the result
             if let Some(decoded_text) = &result.unencrypted_text {
@@ -464,7 +465,12 @@ fn expand_node(
 /// - `input`: The initial text to decode
 /// - `result_sender`: Channel to send the result when found
 /// - `stop`: Atomic boolean to signal when to stop the search
-pub fn astar(input: String, result_sender: Sender<Option<DecoderResult>>, stop: Arc<AtomicBool>) {
+pub fn astar(
+    input: String,
+    result_sender: Sender<Option<DecoderResult>>,
+    stop: Arc<AtomicBool>,
+    config: Arc<Config>,
+) {
     // Calculate heuristic before moving input
     let initial_heuristic = generate_heuristic(&input, &[], &None);
 
@@ -516,6 +522,7 @@ pub fn astar(input: String, result_sender: Sender<Option<DecoderResult>>, stop: 
                     &seen_strings,
                     &stop,
                     prune_threshold.load(AtomicOrdering::Relaxed),
+                    &config,
                 )
             })
             .collect();
@@ -538,15 +545,15 @@ pub fn astar(input: String, result_sender: Sender<Option<DecoderResult>>, stop: 
 
                     debug!("DEBUG: Found result node with text: {:?}", node.state.text);
                     // Found a result node
-                    decoded_how_many_times(curr_depth.load(AtomicOrdering::Relaxed));
+                    decoded_how_many_times(curr_depth.load(AtomicOrdering::Relaxed), &config);
 
                     cli_pretty_printing::success(&format!(
                         "DEBUG: astar.rs - Sending successful result with {} decoders",
                         node.state.path.len()
-                    ));
+                    ), &config);
 
                     // If in top_results mode, store the result in the WaitAthena storage
-                    if get_config().top_results {
+                    if config.top_results {
                         // Store the first text in the vector (there should only be one)
                         if let Some(plaintext) = node.state.text.first() {
                             debug!(
@@ -594,7 +601,7 @@ pub fn astar(input: String, result_sender: Sender<Option<DecoderResult>>, stop: 
                         .expect("Should successfully send the result");
 
                     // Only stop if not in top_results mode
-                    if !get_config().top_results {
+                    if !config.top_results {
                         // Stop further iterations
                         stop.store(true, AtomicOrdering::Relaxed);
                         return;
@@ -657,9 +664,10 @@ mod tests {
     fn astar_handles_empty_input() {
         let (sender, receiver) = bounded::<Option<DecoderResult>>(1);
         let stop = Arc::new(AtomicBool::new(false));
+        let config = Config::default();
 
         // Run A* with empty input
-        astar("".to_string(), sender, stop);
+        astar("".to_string(), sender, stop, config.into());
 
         // Should receive None since there's nothing to decode
         let result = receiver.recv().unwrap();
@@ -670,9 +678,10 @@ mod tests {
     fn astar_prevents_cycles() {
         let (sender, receiver) = bounded::<Option<DecoderResult>>(1);
         let stop = Arc::new(AtomicBool::new(false));
+        let config = Config::default();
 
         // Run A* with input that could cause cycles
-        astar("AAAA".to_string(), sender, stop);
+        astar("AAAA".to_string(), sender, stop, config.into());
 
         // Should eventually complete without hanging
         let _ = receiver.recv().unwrap();
@@ -685,13 +694,14 @@ mod tests {
 
         // Create stop signal
         let stop = Arc::new(AtomicBool::new(false));
+        let config = Config::default();
 
         // Run A* in a separate thread with Base64 encoded "Hello World"
         let input = "SGVsbG8gV29ybGQ=".to_string();
         let stop_clone = stop.clone();
 
         std::thread::spawn(move || {
-            astar(input, sender, stop_clone);
+            astar(input, sender, stop_clone, config.into());
         });
 
         // Wait for result with timeout

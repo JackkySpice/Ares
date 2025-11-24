@@ -5,6 +5,7 @@ use std::sync::mpsc::channel;
 
 use crate::checkers::CheckerTypes;
 use crate::cli_pretty_printing;
+use crate::config::Config;
 use crate::decoders::atbash_decoder::AtbashDecoder;
 use crate::decoders::base32_decoder::Base32Decoder;
 use crate::decoders::base58_bitcoin_decoder::Base58BitcoinDecoder;
@@ -79,27 +80,27 @@ impl Decoders {
     ///
     /// # Panics
     /// Panics if the channel sender fails to send a result, which should not happen in normal operation.
-    pub fn run(&self, text: &str, checker: CheckerTypes) -> MyResults {
+    pub fn run(&self, text: &str, checker: CheckerTypes, config: &Config) -> MyResults {
         trace!("Running .crack() on all decoders");
         let (sender, receiver) = channel();
         self.components
             .into_par_iter()
             .try_for_each_with(sender, |s, i| {
-                let results = i.crack(text, &checker);
+                let results = i.crack(text, &checker, config);
                 if results.success {
-                    cli_pretty_printing::success(&format!(
+                    log::debug!(
                         "DEBUG: filtration_system - Decoder {} succeeded, short-circuiting",
                         results.decoder
-                    ));
+                    );
                     s.send(results.clone()).expect("expected no send error!");
                     // returning None short-circuits the iterator
                     // we don't process any further as we got success
                     return None;
                 }
-                cli_pretty_printing::success(&format!(
+                log::debug!(
                     "DEBUG: filtration_system - Decoder {} failed, continuing",
                     results.decoder
-                ));
+                );
                 s.send(results.clone()).expect("expected no send error!");
                 // return Some(()) to indicate that continue processing
                 Some(())
@@ -110,16 +111,16 @@ impl Decoders {
         while let Ok(result) = receiver.recv() {
             // if we recv success, break.
             if result.success {
-                cli_pretty_printing::success(&format!("DEBUG: filtration_system - Received successful result from {}, returning Break", result.decoder));
+                log::debug!("DEBUG: filtration_system - Received successful result from {}, returning Break", result.decoder);
                 return MyResults::Break(result);
             }
             all_results.push(result)
         }
 
-        cli_pretty_printing::success(&format!(
+        log::debug!(
             "DEBUG: filtration_system - No successful results, returning Continue with {} results",
             all_results.len()
-        ));
+        );
         MyResults::Continue(all_results)
     }
 }
@@ -389,7 +390,8 @@ mod tests {
         let decoders = filter_and_get_decoders(&DecoderResult::default());
         let athena_checker = Checker::<Athena>::new();
         let checker = CheckerTypes::CheckAthena(athena_checker);
-        decoders.run("TXIgUm9ib3QgaXMgZ3JlYXQ=", checker);
+        let config = crate::config::Config::default();
+        decoders.run("TXIgUm9ib3QgaXMgZ3JlYXQ=", checker, &config);
         assert_eq!(true, true);
     }
 

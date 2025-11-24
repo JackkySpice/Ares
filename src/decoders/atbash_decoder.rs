@@ -1,4 +1,5 @@
 use crate::checkers::CheckerTypes;
+use crate::config::Config;
 use crate::decoders::interface::check_string_success;
 
 use super::crack_results::CrackResult;
@@ -25,7 +26,7 @@ impl Crack for Decoder<AtbashDecoder> {
     /// This function does the actual decoding
     /// It returns an Option<string> if it was successful
     /// Else the Option returns nothing and the error is logged in Trace
-    fn crack(&self, text: &str, checker: &CheckerTypes) -> CrackResult {
+    fn crack(&self, text: &str, checker: &CheckerTypes, config: &Config) -> CrackResult {
         trace!("Trying atbash with text {:?}", text);
         let decoded_text = atbash_to_alphabet(text);
 
@@ -40,7 +41,7 @@ impl Crack for Decoder<AtbashDecoder> {
             return results;
         }
 
-        let checker_result = checker.check(&decoded_text);
+        let checker_result = checker.check(&decoded_text, config);
         results.unencrypted_text = Some(vec![decoded_text]);
 
         results.update_checker(&checker_result);
@@ -99,7 +100,7 @@ mod tests {
     #[test]
     fn test_atbash() {
         let decoder = Decoder::<AtbashDecoder>::new();
-        let result = decoder.crack("svool dliow", &get_athena_checker());
+        let result = decoder.crack("svool dliow", &get_athena_checker(), &crate::config::Config::default());
         assert_eq!(result.unencrypted_text.unwrap()[0], "hello world");
     }
 
@@ -107,9 +108,7 @@ mod tests {
     fn test_atbash_capitalization() {
         let decoder = Decoder::<AtbashDecoder>::new();
         let result = decoder.crack(
-            "Zgyzhs Hslfow Pvvk Xzkrgzorazgrlm orpv GSRH",
-            &get_athena_checker(),
-        );
+            "Zgyzhs Hslfow Pvvk Xzkrgzorazgrlm orpv GSRH", &get_athena_checker(), &crate::config::Config::default());
         assert_eq!(
             result.unencrypted_text.unwrap()[0],
             "Atbash Should Keep Capitalization like THIS"
@@ -120,12 +119,11 @@ mod tests {
     fn test_atbash_non_alphabetic_characters() {
         let decoder = Decoder::<AtbashDecoder>::new();
         let result = decoder.crack(
-            "Zgyzhs hslfow ovzev xszizxgvih orpv gsvhv: ',.39=_#%^ rmgzxg zugvi wvxlwrmt!",
-            &get_athena_checker(),
-        );
+            "Zgyzhs hslfow ovzev xszizxgvih orpv gsvhv: ', .39=_#%^ rmgzxg zugvi wvxlwrmt!",
+            &get_athena_checker(), &crate::config::Config::default());
         assert_eq!(
             result.unencrypted_text.unwrap()[0],
-            "Atbash should leave characters like these: ',.39=_#%^ intact after decoding!"
+            "Atbash should leave characters like these: ', .39=_#%^ intact after decoding!"
         );
     }
 
@@ -135,7 +133,7 @@ mod tests {
         // but returns False on check_string_success
         let atbash_decoder = Decoder::<AtbashDecoder>::new();
         let result = atbash_decoder
-            .crack("", &get_athena_checker())
+            .crack("", &get_athena_checker(), &crate::config::Config::default())
             .unencrypted_text;
         assert!(result.is_none());
     }
@@ -144,7 +142,7 @@ mod tests {
     fn atbash_decode_handles_panics() {
         let atbash_decoder = Decoder::<AtbashDecoder>::new();
         let result = atbash_decoder
-            .crack("583920482058430191", &get_athena_checker())
+            .crack("583920482058430191", &get_athena_checker(), &crate::config::Config::default())
             .unencrypted_text;
         assert!(result.is_none());
     }
@@ -153,7 +151,7 @@ mod tests {
     fn atbash_handle_panic_if_empty_string() {
         let atbash_decoder = Decoder::<AtbashDecoder>::new();
         let result = atbash_decoder
-            .crack("", &get_athena_checker())
+            .crack("", &get_athena_checker(), &crate::config::Config::default())
             .unencrypted_text;
         assert!(result.is_none());
     }
@@ -162,7 +160,7 @@ mod tests {
     fn atbash_work_if_string_not_atbash() {
         let atbash_decoder = Decoder::<AtbashDecoder>::new();
         let result = atbash_decoder
-            .crack("hello good day!", &get_athena_checker())
+            .crack("hello good day!", &get_athena_checker(), &crate::config::Config::default())
             .unencrypted_text;
         assert!(result.is_some());
     }
@@ -171,7 +169,7 @@ mod tests {
     fn atbash_handle_panic_if_emoji() {
         let atbash_decoder = Decoder::<AtbashDecoder>::new();
         let result = atbash_decoder
-            .crack("😂", &get_athena_checker())
+            .crack("😂", &get_athena_checker(), &crate::config::Config::default())
             .unencrypted_text;
         assert!(result.is_none());
     }

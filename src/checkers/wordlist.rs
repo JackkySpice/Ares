@@ -1,6 +1,6 @@
 use crate::checkers::checker_result::CheckResult;
 use crate::checkers::checker_type::{Check, Checker};
-use crate::config::get_config;
+use crate::config::Config;
 use gibberish_or_not::Sensitivity;
 use lemmeknow::Identifier;
 use log::trace;
@@ -27,9 +27,7 @@ impl Check for Checker<WordlistChecker> {
         }
     }
 
-    fn check(&self, text: &str) -> CheckResult {
-        let config = get_config();
-
+    fn check(&self, text: &str, config: &Config) -> CheckResult {
         // Only run this checker if a wordlist is provided
         if let Some(wordlist) = &config.wordlist {
             trace!("Running wordlist checker with {} entries", wordlist.len());

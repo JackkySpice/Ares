@@ -6,6 +6,7 @@
 use super::crack_results::CrackResult;
 use super::interface::{Crack, Decoder};
 use crate::checkers::CheckerTypes;
+use crate::config::Config;
 use gibberish_or_not::Sensitivity;
 use log::{debug, trace};
 use once_cell::sync::Lazy;
@@ -82,7 +83,7 @@ impl Crack for Decoder<VigenereDecoder> {
         }
     }
 
-    fn crack(&self, text: &str, checker: &CheckerTypes) -> CrackResult {
+    fn crack(&self, text: &str, checker: &CheckerTypes, config: &Config) -> CrackResult {
         trace!("Attempting Vigenère decryption on text: {:?}", text);
         let mut results = CrackResult::new(self, text.to_string());
 
@@ -95,7 +96,7 @@ impl Crack for Decoder<VigenereDecoder> {
         }
 
         let checker_with_sensitivity = checker.with_sensitivity(Sensitivity::Medium);
-        let mut checker_result = checker_with_sensitivity.check(text);
+        let mut checker_result = checker_with_sensitivity.check(text, config);
 
         for key_length in 3..30 {
             // Use Medium sensitivity for Vigenere decoder
@@ -105,7 +106,7 @@ impl Crack for Decoder<VigenereDecoder> {
                 continue;
             }
             let decode_attempt = decrypt(text, key_str);
-            checker_result = checker_with_sensitivity.check(&decode_attempt);
+            checker_result = checker_with_sensitivity.check(&decode_attempt, config);
             if checker_result.is_identified {
                 results.unencrypted_text = Some(vec![decode_attempt]);
                 results.update_checker(&checker_result);
@@ -239,7 +240,7 @@ mod tests {
         let result = vigenere_decoder
             .crack(
                 "eznwxg kce yjmwuckgrttta ucixkb ceb sxkwfv tpkqwwj rnima qw ccvwlgu mg xvktpnixl bgor, xgktwugcz (jcv emi equkkcs mw) Jcjc64, Wxfifvaxfit, Erchtz kkgftk, ZWV13, LPA xvkqugcz, ivf dycr uwtv. Gi namu rbktvkgu yazwzkkfbl ivf ycjkqavzah mw qfvlibng vyc tgkwfzlv mgxg rls txxnp rwx ixrimekqivv btvwlkee bxbpqu, mummv jrlseqvi dsamqxnv jprmzu fd tgkwfzlv tcbqdyibkincw.",
-                &get_athena_checker(),
+                &get_athena_checker(), &crate::config::Config::default(),
             )
             .unencrypted_text.expect("No unencrypted text for Vigenere decoder");
 
@@ -256,7 +257,7 @@ mod tests {
         let result = vigenere_decoder
             .crack(
                 "eznwxg kce yjmwuckgrttta ucixkb ceb sxkwfv tpkqwwj rnima qw ccvwlgu mg xvktpnixl bgor, xgktwugcz (jcv emi equkkcs mw) Jcjc64, Wxfifvaxfit, Erchtz kkgftk, ZWV13, LPA xvkqugcz, ivf dycr uwtv. Gi namu rbktvkgu yazwzkkfbl ivf ycjkqavzah mw qfvlibng vyc tgkwfzlv mgxg rls txxnp rwx ixrimekqivv btvwlkee bxbpqu, mummv jrlseqvi dsamqxnv jprmzu fd tgkwfzlv tcbqdyibkincw.",
-                &get_athena_checker(),
+                &get_athena_checker(), &crate::config::Config::default(),
             )
             .key.expect("No key for Vigenere decoder");
 
@@ -269,8 +270,7 @@ mod tests {
         let result = vigenere_decoder
             .crack(
                 "Ck jdp tqiyr, p vib'u gsebta gonpgl bq tmkxz uqjr dy bpg vvehamf jsgyikg fd xma mavq. Iam lqdchmqk err wta zckftk xwqi adewz xzqxhv ipu mceg byf rnima qw adgm kgcjh, hxbkdgoxl nqi qtgaqvztxmg bq sjjx ivf pcaewekjf vkmmp; zrh tjqnzrn mw lkjrxgockjf qxbegvl gxl ipu egxmv kj jxfqbgu.",
-                &get_athena_checker(),
-            )
+                &get_athena_checker(), &crate::config::Config::default())
             .unencrypted_text.expect("No unencrypted text for Vigenere decoder");
 
         let decoded_text = result
@@ -286,8 +286,7 @@ mod tests {
         let result = vigenere_decoder
             .crack(
                 "Ck jdp tqiyr, p vib'u gsebta gonpgl bq tmkxz uqjr dy bpg vvehamf jsgyikg fd xma mavq. Iam lqdchmqk err wta zckftk xwqi adewz xzqxhv ipu mceg byf rnima qw adgm kgcjh, hxbkdgoxl nqi qtgaqvztxmg bq sjjx ivf pcaewekjf vkmmp; zrh tjqnzrn mw lkjrxgockjf qxbegvl gxl ipu egxmv kj jxfqbgu.",
-                &get_athena_checker(),
-            )
+                &get_athena_checker(), &crate::config::Config::default())
             .key.expect("No key for Vigenere decoder");
 
         assert_eq!(result, "CRYPTII");
@@ -299,8 +298,7 @@ mod tests {
         let result = vigenere_decoder
             .crack(
                 "Err xgbmncgvxvkg zq toqlger xg bpgzp puqtkkw ih ilcgr, axizp kfghcoj fzhxzdckgdg, ivf jmaom xtfzaxua, yzrw kmagrpra apqngcz bpgp ndlamuj qikwvi dcbhzqgj, cmaqjkk ltnzwrcyhmqkkkw, pgl lkjnatg kqxlxmqdg jixeta efketzidcc ih i gqllv vpqnu. Apm kwodscbkivzmc bvknlbtl umqngcz, xctigcz, bzkcjxgo, pkjqxgo, otfuabvo, iiscmqvi, rls uwla cyczciiv. Gi viv jvyg lwcpuq ihw nczli hz bqf fxzp qp wptjcmptw uhz pwdyc xizu, jsra ia vymhx uifv zn luinc kpfuinj. Gi lmktvrtl ivf gcgvmqxvq eamzqdmcxa. ",
-                &get_athena_checker(),
-            )
+                &get_athena_checker(), &crate::config::Config::default())
             .unencrypted_text
             .expect("No unencrypted text for Vigenere decoder");
 
@@ -317,8 +315,7 @@ mod tests {
         let result = vigenere_decoder
             .crack(
                 "Err xgbmncgvxvkg zq toqlger xg bpgzp puqtkkw ih ilcgr, axizp kfghcoj fzhxzdckgdg, ivf jmaom xtfzaxua, yzrw kmagrpra apqngcz bpgp ndlamuj qikwvi dcbhzqgj, cmaqjkk ltnzwrcyhmqkkkw, pgl lkjnatg kqxlxmqdg jixeta efketzidcc ih i gqllv vpqnu. Apm kwodscbkivzmc bvknlbtl umqngcz, xctigcz, bzkcjxgo, pkjqxgo, otfuabvo, iiscmqvi, rls uwla cyczciiv. Gi viv jvyg lwcpuq ihw nczli hz bqf fxzp qp wptjcmptw uhz pwdyc xizu, jsra ia vymhx uifv zn luinc kpfuinj. Gi lmktvrtl ivf gcgvmqxvq eamzqdmcxa. ",
-                &get_athena_checker(),
-            )
+                &get_athena_checker(), &crate::config::Config::default())
             .key.expect("No key for Vigenere decoder");
 
         assert_eq!(result, "CRYPTII");
@@ -329,9 +326,7 @@ mod tests {
         let vigenere_decoder = Decoder::<VigenereDecoder>::new();
         let result = vigenere_decoder
             .crack(
-                "Altd hlbe tg lrncmwxpo kpxs evl ztrsuicp qptspf. Ivplyprr th pw clhoic pozc",
-                &get_athena_checker(),
-            )
+                "Altd hlbe tg lrncmwxpo kpxs evl ztrsuicp qptspf. Ivplyprr th pw clhoic pozc", &get_athena_checker(), &crate::config::Config::default())
             .unencrypted_text
             .expect("No unencrypted text for Vigenere decoder");
 
@@ -350,9 +345,7 @@ mod tests {
         let vigenere_decoder = Decoder::<VigenereDecoder>::new();
         let result = vigenere_decoder
             .crack(
-                "Altd hlbe tg lrncmwxpo kpxs evl ztrsuicp qptspf. Ivplyprr th pw clhoic pozc",
-                &get_athena_checker(),
-            )
+                "Altd hlbe tg lrncmwxpo kpxs evl ztrsuicp qptspf. Ivplyprr th pw clhoic pozc", &get_athena_checker(), &crate::config::Config::default())
             .key
             .expect("No key for Vigenere decoder");
 
@@ -363,7 +356,7 @@ mod tests {
     fn test_empty_input() {
         let vigenere_decoder = Decoder::<VigenereDecoder>::new();
         let result = vigenere_decoder
-            .crack("", &get_athena_checker())
+            .crack("", &get_athena_checker(), &crate::config::Config::default())
             .unencrypted_text;
         assert!(result.is_none());
     }
@@ -372,7 +365,7 @@ mod tests {
     fn test_non_alphabetic_input() {
         let vigenere_decoder = Decoder::<VigenereDecoder>::new();
         let result = vigenere_decoder
-            .crack("12345!@#$%", &get_athena_checker())
+            .crack("12345!@#$%", &get_athena_checker(), &crate::config::Config::default())
             .unencrypted_text;
         assert!(result.is_none());
     }

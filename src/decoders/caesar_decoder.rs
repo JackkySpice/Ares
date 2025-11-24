@@ -5,6 +5,7 @@
 //! Uses Low sensitivity for gibberish detection.
 
 use crate::checkers::CheckerTypes;
+use crate::config::Config;
 use crate::decoders::interface::check_string_success;
 use gibberish_or_not::Sensitivity;
 
@@ -28,7 +29,7 @@ use log::{info, trace};
 /// let athena_checker = Checker::<Athena>::new();
 /// let checker = CheckerTypes::CheckAthena(athena_checker);
 ///
-/// let result = decode_caesar.crack("uryyb guvf vf ybat grkg", &checker).unencrypted_text;
+/// let result = decode_caesar.crack("uryyb guvf vf ybat grkg", &checker, &ares::config::Config::default()).unencrypted_text;
 /// assert!(result.is_some());
 /// // If it succeeds, the 0th element is the plaintext else it'll contain 25 elements
 /// // of unsuccessfully decoded text
@@ -51,7 +52,7 @@ impl Crack for Decoder<CaesarDecoder> {
     /// This function does the actual decoding
     /// It returns an Option<string> if it was successful
     /// Else the Option returns nothing and the error is logged in Trace
-    fn crack(&self, text: &str, checker: &CheckerTypes) -> CrackResult {
+    fn crack(&self, text: &str, checker: &CheckerTypes, config: &Config) -> CrackResult {
         trace!("Trying Caesar Cipher with text {:?}", text);
         let mut results = CrackResult::new(self, text.to_string());
         let mut decoded_strings = Vec::new();
@@ -70,7 +71,7 @@ impl Crack for Decoder<CaesarDecoder> {
                 );
                 return results;
             }
-            let checker_result = checker_with_sensitivity.check(borrowed_decoded_text);
+            let checker_result = checker_with_sensitivity.check(borrowed_decoded_text, config);
             // If checkers return true, exit early with the correct result
             if checker_result.is_identified {
                 trace!("Found a match with caesar shift {}", shift);
@@ -155,14 +156,14 @@ mod tests {
     #[test]
     fn successful_decoding() {
         let caesar_decoder = Decoder::<CaesarDecoder>::new();
-        let result = caesar_decoder.crack("fyyfhp", &get_athena_checker());
+        let result = caesar_decoder.crack("fyyfhp", &get_athena_checker(), &crate::config::Config::default());
         assert_eq!(result.unencrypted_text.unwrap()[0], "attack");
     }
 
     #[test]
     fn successful_decoding_correct_key() {
         let caesar_decoder = Decoder::<CaesarDecoder>::new();
-        let result = caesar_decoder.crack("fyyfhp", &get_athena_checker());
+        let result = caesar_decoder.crack("fyyfhp", &get_athena_checker(), &crate::config::Config::default());
         let key = result.key.expect("No key found for caesar cipher");
         assert_eq!(key, "21");
     }
@@ -171,7 +172,7 @@ mod tests {
     fn successful_decoding_one_step_forward() {
         let caesar_decoder = Decoder::<CaesarDecoder>::new();
 
-        let result = caesar_decoder.crack("buubdl", &get_athena_checker());
+        let result = caesar_decoder.crack("buubdl", &get_athena_checker(), &crate::config::Config::default());
         let decoded_str = &result
             .unencrypted_text
             .expect("No unencrypted text for caesar");
@@ -182,7 +183,7 @@ mod tests {
     fn successful_decoding_one_step_forward_correct_key() {
         let caesar_decoder = Decoder::<CaesarDecoder>::new();
 
-        let result = caesar_decoder.crack("buubdl", &get_athena_checker());
+        let result = caesar_decoder.crack("buubdl", &get_athena_checker(), &crate::config::Config::default());
         let key = result.key.expect("No key found for caesar cipher");
         assert_eq!(key, "25");
     }
@@ -191,7 +192,7 @@ mod tests {
     fn successful_decoding_one_step_backward() {
         let caesar_decoder = Decoder::<CaesarDecoder>::new();
 
-        let result = caesar_decoder.crack("zsszbj", &get_athena_checker());
+        let result = caesar_decoder.crack("zsszbj", &get_athena_checker(), &crate::config::Config::default());
         let decoded_str = &result
             .unencrypted_text
             .expect("No unencrypted text for caesar");
@@ -202,7 +203,7 @@ mod tests {
     fn successful_decoding_one_step_backward_correct_key() {
         let caesar_decoder = Decoder::<CaesarDecoder>::new();
 
-        let result = caesar_decoder.crack("zsszbj", &get_athena_checker());
+        let result = caesar_decoder.crack("zsszbj", &get_athena_checker(), &crate::config::Config::default());
         let key = result.key.expect("No key found for caesar cipher");
         assert_eq!(key, "1");
     }
@@ -211,9 +212,7 @@ mod tests {
     fn successful_decoding_longer_text() {
         let caesar_decoder = Decoder::<CaesarDecoder>::new();
         let result = caesar_decoder.crack(
-            "Tqxxa ftue ue mz qjmybxq fqjf tffbe://saasxq.oay !",
-            &get_athena_checker(),
-        );
+            "Tqxxa ftue ue mz qjmybxq fqjf tffbe://saasxq.oay !", &get_athena_checker(), &crate::config::Config::default());
         println!("Result: {:?}", result);
         assert_eq!(
             result.unencrypted_text.unwrap()[0],
@@ -225,9 +224,7 @@ mod tests {
     fn successful_decoding_longer_text_correct_key() {
         let caesar_decoder = Decoder::<CaesarDecoder>::new();
         let result = caesar_decoder.crack(
-            "Tqxxa ftue ue mz qjmybxq fqjf tffbe://saasxq.oay !",
-            &get_athena_checker(),
-        );
+            "Tqxxa ftue ue mz qjmybxq fqjf tffbe://saasxq.oay !", &get_athena_checker(), &crate::config::Config::default());
         let key = result.key.expect("No key found for caesar cipher");
         assert_eq!(key, "14");
     }
@@ -237,8 +234,7 @@ mod tests {
         let caesar_decoder = Decoder::<CaesarDecoder>::new();
         let result = caesar_decoder.crack(
             "Itk, tqxxa ftqdq. Ftue ue mz qjmybxq ar xazs fqjf iuft bgzogmfuaz!",
-            &get_athena_checker(),
-        );
+            &get_athena_checker(), &crate::config::Config::default());
         assert_eq!(
             result.unencrypted_text.unwrap()[0],
             "Why, hello there. This is an example of long text with puncuation!"
@@ -250,8 +246,7 @@ mod tests {
         let caesar_decoder = Decoder::<CaesarDecoder>::new();
         let result = caesar_decoder.crack(
             "Itk, tqxxa ftqdq. Ftue ue mz qjmybxq ar xazs fqjf iuft bgzogmfuaz!",
-            &get_athena_checker(),
-        );
+            &get_athena_checker(), &crate::config::Config::default());
         let key = result.key.expect("No key found for caesar cipher");
         assert_eq!(key, "14");
     }
@@ -262,7 +257,7 @@ mod tests {
         // but returns False on check_string_success
         let caesar_decoder = Decoder::<CaesarDecoder>::new();
         let result = caesar_decoder
-            .crack("", &get_athena_checker())
+            .crack("", &get_athena_checker(), &crate::config::Config::default())
             .unencrypted_text;
         assert!(result.is_none());
     }
@@ -271,7 +266,7 @@ mod tests {
     fn caesar_decode_fails() {
         let caesar_decoder = Decoder::<CaesarDecoder>::new();
         let result = caesar_decoder
-            .crack("#", &get_athena_checker())
+            .crack("#", &get_athena_checker(), &crate::config::Config::default())
             .unencrypted_text;
         assert!(result.is_none());
     }
@@ -287,8 +282,7 @@ mod tests {
         // We'll use the actual implementation but check that it calls with_sensitivity
         // with Low sensitivity
         let result = caesar_decoder.crack(
-            text,
-            &CheckerTypes::CheckEnglish(Checker::<EnglishChecker>::new()),
+            text, &CheckerTypes::CheckEnglish(Checker::<EnglishChecker>::new()), &crate::config::Config::default(),
         );
 
         // Verify that the implementation is using Low sensitivity by checking the code

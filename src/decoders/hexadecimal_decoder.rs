@@ -1,4 +1,5 @@
 use crate::checkers::CheckerTypes;
+use crate::config::Config;
 use crate::decoders::interface::check_string_success;
 
 use super::crack_results::CrackResult;
@@ -34,7 +35,7 @@ impl Crack for Decoder<HexadecimalDecoder> {
     /// This function does the actual decoding
     /// It returns an Option<string> if it was successful
     /// Else the Option returns nothing and the error is logged in Trace
-    fn crack(&self, text: &str, checker: &CheckerTypes) -> CrackResult {
+    fn crack(&self, text: &str, checker: &CheckerTypes, config: &Config) -> CrackResult {
         trace!("Trying hexadecimal with text {:?}", text);
         let decoded_text: Result<String, Error> = hexadecimal_to_string(text);
         let mut results = CrackResult::new(self, text.to_string());
@@ -56,7 +57,7 @@ impl Crack for Decoder<HexadecimalDecoder> {
             return results;
         }
 
-        let checker_result = checker.check(&decoded_text);
+        let checker_result = checker.check(&decoded_text, config);
         results.unencrypted_text = Some(vec![decoded_text]);
 
         results.update_checker(&checker_result);
@@ -130,9 +131,7 @@ mod tests {
         // This tests if Hexadecimal can decode Hexadecimal with no spaces successfully
         let decoder = Decoder::<HexadecimalDecoder>::new();
         let result = decoder.crack(
-            "537068696e78206f6620626c61636b2071756172747a2c206a75646765206d7920766f772e",
-            &get_athena_checker(),
-        );
+            "537068696e78206f6620626c61636b2071756172747a2c206a75646765206d7920766f772e", &get_athena_checker(), &crate::config::Config::default());
         assert_eq!(
             result.unencrypted_text.unwrap()[0],
             "Sphinx of black quartz, judge my vow."
@@ -145,9 +144,7 @@ mod tests {
         // We use the hex string from the "c4ptur3-th3-fl4g" THM room
         let decoder = Decoder::<HexadecimalDecoder>::new();
         let result = decoder.crack(
-            "68 65 78 61 64 65 63 69 6d 61 6c 20 6f 72 20 62 61 73 65 31 36 3f",
-            &get_athena_checker(),
-        );
+            "68 65 78 61 64 65 63 69 6d 61 6c 20 6f 72 20 62 61 73 65 31 36 3f", &get_athena_checker(), &crate::config::Config::default());
         assert_eq!(
             result.unencrypted_text.unwrap()[0],
             "hexadecimal or base16?"
@@ -159,9 +156,7 @@ mod tests {
         // This tests if Hexadecimal can decode Hexadecimal with delimiters successfully
         let decoder = Decoder::<HexadecimalDecoder>::new();
         let result = decoder.crack(
-            "68;74;74;70;73;3a;2f;2f;77;77;77;2e;67;6f;6f;67;6c;65;2e;63;6f;6d",
-            &get_athena_checker(),
-        );
+            "68;74;74;70;73;3a;2f;2f;77;77;77;2e;67;6f;6f;67;6c;65;2e;63;6f;6d", &get_athena_checker(), &crate::config::Config::default());
         assert_eq!(
             result.unencrypted_text.unwrap()[0],
             "https://www.google.com"
@@ -173,9 +168,7 @@ mod tests {
         // This tests if Hexadecimal can decode uppercase Hexadecimal successfully
         let decoder = Decoder::<HexadecimalDecoder>::new();
         let result = decoder.crack(
-            "5570706572636173652068657861646563696D616C",
-            &get_athena_checker(),
-        );
+            "5570706572636173652068657861646563696D616C", &get_athena_checker(), &crate::config::Config::default());
         assert_eq!(result.unencrypted_text.unwrap()[0], "Uppercase hexadecimal");
     }
 
@@ -184,9 +177,7 @@ mod tests {
         // This tests if Hexadecimal can decode Hexadecimal with 0x delimiters successfully
         let decoder = Decoder::<HexadecimalDecoder>::new();
         let result = decoder.crack(
-            "0x540x680x690x730x200x750x730x650x730x200x300x780x200x610x730x200x740x680x650x200x700x720x650x660x690x780x200x620x650x740x770x650x650x6e0x200x650x760x650x720x790x200x630x680x750x6e0x6b",
-            &get_athena_checker(),
-        );
+            "0x540x680x690x730x200x750x730x650x730x200x300x780x200x610x730x200x740x680x650x200x700x720x650x660x690x780x200x620x650x740x770x650x650x6e0x200x650x760x650x720x790x200x630x680x750x6e0x6b", &get_athena_checker(), &crate::config::Config::default());
         assert_eq!(
             result.unencrypted_text.unwrap()[0],
             "This uses 0x as the prefix between every chunk"
@@ -198,9 +189,8 @@ mod tests {
         // This tests if Hexadecimal can decode Hexadecimal with 0x and comma delimiters successfully
         let decoder = Decoder::<HexadecimalDecoder>::new();
         let result = decoder.crack(
-            "0x48,0x65,0x78,0x61,0x64,0x65,0x63,0x69,0x6d,0x61,0x6c,0x20,0x77,0x69,0x74,0x68,0x20,0x30,0x78,0x20,0x2b,0x20,0x63,0x6f,0x6d,0x6d,0x61,0x73",
-            &get_athena_checker(),
-        );
+            "0x48, 0x65,0x78,0x61,0x64,0x65,0x63,0x69,0x6d,0x61,0x6c,0x20,0x77,0x69,0x74,0x68,0x20,0x30,0x78,0x20,0x2b,0x20,0x63,0x6f,0x6d,0x6d,0x61,0x73",
+            &get_athena_checker(), &crate::config::Config::default());
         assert_eq!(
             result.unencrypted_text.unwrap()[0],
             "Hexadecimal with 0x + commas"
@@ -215,9 +205,7 @@ mod tests {
         let hexadecimal_decoder = Decoder::<HexadecimalDecoder>::new();
         let result = hexadecimal_decoder
             .crack(
-                "hello my name is panicky mc panic face!",
-                &get_athena_checker(),
-            )
+                "hello my name is panicky mc panic face!", &get_athena_checker(), &crate::config::Config::default())
             .unencrypted_text;
         assert!(result.is_some());
     }
@@ -228,7 +216,7 @@ mod tests {
         // It should return None
         let citrix_ctx1_decoder = Decoder::<HexadecimalDecoder>::new();
         let result = citrix_ctx1_decoder
-            .crack("", &get_athena_checker())
+            .crack("", &get_athena_checker(), &crate::config::Config::default())
             .unencrypted_text;
         assert!(result.is_none());
     }
@@ -239,7 +227,7 @@ mod tests {
         // It should return None
         let base64_url_decoder = Decoder::<HexadecimalDecoder>::new();
         let result = base64_url_decoder
-            .crack("😂", &get_athena_checker())
+            .crack("😂", &get_athena_checker(), &crate::config::Config::default())
             .unencrypted_text;
         assert!(result.is_none());
     }

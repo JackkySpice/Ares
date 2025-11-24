@@ -3,6 +3,7 @@
 //! Call brainfuck_interpreter.crack to use. It returns Option<String> and check with
 //! `result.is_some()` to see if it returned okay.
 use crate::checkers::CheckerTypes;
+use crate::config::Config;
 
 use super::crack_results::CrackResult;
 use super::interface::Crack;
@@ -25,7 +26,7 @@ use log::{debug, trace};
 /// let athena_checker = Checker::<Athena>::new();
 /// let checker = CheckerTypes::CheckAthena(athena_checker);
 ///
-/// let result = brainfuck_interpreter.crack(">++++++++[<+++++++++>-]<.>++++[<+++++++>-]<+.+++++++..+++.>>++++++[<+++++++>-]<++.------------.>++++++[<+++++++++>-]<+.<.+++.------.--------.>>>++++[<++++++++>-]<+.", &checker).unencrypted_text;
+/// let result = brainfuck_interpreter.crack(">++++++++[<+++++++++>-]<.>++++[<+++++++>-]<+.+++++++..+++.>>++++++[<+++++++>-]<++.------------.>++++++[<+++++++++>-]<+.<.+++.------.--------.>>>++++[<++++++++>-]<+.", &checker, &ares::config::Config::default()).unencrypted_text;
 /// assert!(result.is_some());
 /// assert_eq!(result.unwrap()[0], "Hello, World!");
 /// ```
@@ -46,7 +47,7 @@ impl Crack for Decoder<BrainfuckInterpreter> {
     /// This function does the actual decoding
     /// It returns an Option<string> if it was successful
     /// Else the Option returns nothing and the error is logged in Trace
-    fn crack(&self, text: &str, checker: &CheckerTypes) -> CrackResult {
+    fn crack(&self, text: &str, checker: &CheckerTypes, config: &Config) -> CrackResult {
         trace!("Trying brainfuck with text {:?}", text);
         let mut results = CrackResult::new(self, text.to_string());
 
@@ -65,7 +66,7 @@ impl Crack for Decoder<BrainfuckInterpreter> {
         match Brainfuck::new(text).with_output_ref(&mut buf).execute() {
             Ok(_) => {
                 let decoded_text = String::from_utf8(buf).unwrap_or_default();
-                let checker_result = checker.check(&decoded_text);
+                let checker_result = checker.check(&decoded_text, config);
                 results.unencrypted_text = Some(vec![decoded_text]);
                 results.update_checker(&checker_result);
 
@@ -118,9 +119,7 @@ mod tests {
         let brainfuck_interpreter = Decoder::<BrainfuckInterpreter>::new();
         let result = brainfuck_interpreter.crack(
             ">++++++++[<+++++++++>-]<.>++++[<+++++++>-]<+.+++++++..+++.>>++++++[<+++++++>-]
-            <++.------------.>++++++[<+++++++++>-]<+.<.+++.------.--------.>>>++++[<++++++++>-]<+.",
-            &get_athena_checker(),
-        );
+            <++.------------.>++++++[<+++++++++>-]<+.<.+++.------.--------.>>>++++[<++++++++>-]<+.", &get_athena_checker(), &crate::config::Config::default());
         assert_eq!(result.unencrypted_text.unwrap()[0], "Hello, World!");
     }
 
@@ -130,7 +129,7 @@ mod tests {
         let result = brainfuck_interpreter.crack("+++++++++[>++++++++>++++++++++++>+++++++++++>++++>+++++>++++++++>++++++++++>++++++++++++<<<<<<<<-]
             >++++.>+++.+++.>++.<-----.>>----.>>+.>>++++.+++.++.<<<<<<.>>+.-.<<<+++.>>+++.>>-.<.>>-.>+++++++.>-----..+++++++++.<<<<.>>----.>.>.<<<<+.
             -.>>++++.>++++.<<<<<-..+++.>>.<<<++++++++.>.+++.>++++.>>>>-.<<<+.-.>>+.<<.<----.<---.+.>---.>.>>>>.<<<<<<-.++++++.>>.<+++.-------.<+.
-            >++++.>.<----.>.>>>++++++++.+++.>---.<<<<<++++.+++++++.<+++.>>.<--------.---.<.>>+.", &get_athena_checker());
+            >++++.>.<----.>.>>>++++++++.+++.>---.<<<<<++++.+++++++.<+++.>>.<--------.---.<.>>+.", &get_athena_checker(), &crate::config::Config::default());
         assert_eq!(
             result.unencrypted_text.unwrap()[0],
             "Lorem Ipsum! Oh, Happy Day! Hello World! I hope you have a lovely day!"
@@ -142,7 +141,7 @@ mod tests {
         let brainfuck_interpreter = Decoder::<BrainfuckInterpreter>::new();
         let result = brainfuck_interpreter.crack(">++++++++[<+++++++++>trash-]<.>++++[<+++++++>-]<+.+++++++..+lots+of+garbage.
             >>++++++[<+++++++>-]<++.--some--random----rubbish---here-.>++++++[<+++++++++>-]<+.<.+++.------.--------.
-            >>>++++[<++++++++>-]<+.", &get_athena_checker());
+            >>>++++[<++++++++>-]<+.", &get_athena_checker(), &crate::config::Config::default());
         assert_eq!(result.unencrypted_text.unwrap()[0], "Hello, World!");
     }
 
@@ -150,11 +149,11 @@ mod tests {
     fn brainfuck_fail_unmatched_bracket() {
         let brainfuck_interpreter = Decoder::<BrainfuckInterpreter>::new();
         let result = brainfuck_interpreter
-            .crack("[[]", &get_athena_checker())
+            .crack("[[]", &get_athena_checker(), &crate::config::Config::default())
             .unencrypted_text;
         assert!(result.is_none());
         let result = brainfuck_interpreter
-            .crack("[+]]", &get_athena_checker())
+            .crack("[+]]", &get_athena_checker(), &crate::config::Config::default())
             .unencrypted_text;
         assert!(result.is_none());
     }
@@ -165,11 +164,11 @@ mod tests {
         // It should return None
         let brainfuck_interpreter = Decoder::<BrainfuckInterpreter>::new();
         let result = brainfuck_interpreter
-            .crack("", &get_athena_checker())
+            .crack("", &get_athena_checker(), &crate::config::Config::default())
             .unencrypted_text;
         assert!(result.is_none());
         let result = brainfuck_interpreter
-            .crack("aeiou", &get_athena_checker())
+            .crack("aeiou", &get_athena_checker(), &crate::config::Config::default())
             .unencrypted_text;
         assert!(result.is_none());
     }
@@ -180,14 +179,12 @@ mod tests {
         // It should return None
         let brainfuck_interpreter = Decoder::<BrainfuckInterpreter>::new();
         let result = brainfuck_interpreter
-            .crack(">+[+]..", &get_athena_checker())
+            .crack(">+[+]..", &get_athena_checker(), &crate::config::Config::default())
             .unencrypted_text;
         assert!(result.is_none());
         let result = brainfuck_interpreter
             .crack(
-                ">a+e[i+o]u.a-bunch-of-trash-in-between.",
-                &get_athena_checker(),
-            )
+                ">a+e[i+o]u.a-bunch-of-trash-in-between.", &get_athena_checker(), &crate::config::Config::default())
             .unencrypted_text;
         assert!(result.is_none());
     }
@@ -196,7 +193,7 @@ mod tests {
     fn brainfuck_fail_no_print() {
         let brainfuck_interpreter = Decoder::<BrainfuckInterpreter>::new();
         let result = brainfuck_interpreter
-            .crack("+-<>[]", &get_athena_checker())
+            .crack("+-<>[]", &get_athena_checker(), &crate::config::Config::default())
             .unencrypted_text;
         assert!(result.is_none());
     }
@@ -205,7 +202,7 @@ mod tests {
     fn brainfuck_fail_no_print_at_end() {
         let brainfuck_interpreter = Decoder::<BrainfuckInterpreter>::new();
         let result = brainfuck_interpreter
-            .crack("+++++++++++++++++.-", &get_athena_checker())
+            .crack("+++++++++++++++++.-", &get_athena_checker(), &crate::config::Config::default())
             .unencrypted_text;
         assert!(result.is_none());
     }
@@ -214,7 +211,7 @@ mod tests {
     fn brainfuck_fail_read() {
         let brainfuck_interpreter = Decoder::<BrainfuckInterpreter>::new();
         let result = brainfuck_interpreter
-            .crack("+-<>,.[]", &get_athena_checker())
+            .crack("+-<>, .[]", &get_athena_checker(), &crate::config::Config::default())
             .unencrypted_text;
         assert!(result.is_none());
     }
@@ -223,7 +220,7 @@ mod tests {
     fn brainfuck_successful_wrapping() {
         let brainfuck_interpreter = Decoder::<BrainfuckInterpreter>::new();
         let result =
-            brainfuck_interpreter.crack("+++++++++++[---]<-....>-....", &get_athena_checker());
+            brainfuck_interpreter.crack("+++++++++++[---]<-....>-....", &get_athena_checker(), &crate::config::Config::default());
         assert_eq!(result.unencrypted_text.unwrap()[0], "ÿÿÿÿÿÿÿÿ");
     }
 }

@@ -17,13 +17,14 @@
 //!
 //! # Usage
 //! ```rust
+//! extern crate ares;
 //! use ares::cli_pretty_printing::{success, warning};
 //!
 //! // Print a success message
-//! println!("{}", success("Operation completed successfully"));
+//! println!("{}", success("Operation completed successfully", &ares::config::Config::default()));
 //!
 //! // Print a warning message
-//! println!("{}", warning("Please check your input"));
+//! println!("{}", warning("Please check your input", &ares::config::Config::default()));
 //! ```
 
 #[cfg(test)]
@@ -31,6 +32,7 @@ mod tests;
 use crate::storage;
 use crate::storage::wait_athena_storage::PlaintextResult;
 use crate::DecoderResult;
+use crate::config::Config;
 use colored::Colorize;
 use std::env;
 use std::fs::write;
@@ -124,8 +126,8 @@ pub fn parse_rgb(rgb: &str) -> Option<(u8, u8, u8)> {
 /// - success: Used for success messages
 /// - question: Used for interactive prompts
 /// - statement: Used for neutral messages
-fn color_string(text: &str, role: &str) -> String {
-    let config = crate::config::get_config();
+fn color_string(text: &str, role: &str, config: &Config) -> String {
+    // config passed as argument
 
     // Get the RGB color string, defaulting to statement color if not found
     let rgb = match config.colourscheme.get(role) {
@@ -163,15 +165,15 @@ fn color_string(text: &str, role: &str) -> String {
 /// ```
 /// use ares::cli_pretty_printing::statement;
 ///
-/// let info = statement("Status update", Some("informational"));
-/// let neutral = statement("Regular text", None);
+/// let info = statement("Status update", Some("informational"), &ares::config::Config::default());
+/// let neutral = statement("Regular text", None, &ares::config::Config::default());
 /// assert!(!info.is_empty());
 /// assert!(!neutral.is_empty());
 /// ```
-pub fn statement(text: &str, role: Option<&str>) -> String {
+pub fn statement(text: &str, role: Option<&str>, config: &Config) -> String {
     match role {
-        Some(r) => color_string(text, r),
-        None => color_string(text, "statement"),
+        Some(r) => color_string(text, r, config),
+        None => color_string(text, "statement", config),
     }
 }
 
@@ -186,8 +188,8 @@ pub fn statement(text: &str, role: Option<&str>) -> String {
 /// # Returns
 /// * `String` - The text colored in the warning color
 #[allow(dead_code)]
-pub fn warning(text: &str) -> String {
-    color_string(text, "warning")
+pub fn warning(text: &str, config: &Config) -> String {
+    color_string(text, "warning", config)
 }
 
 /// Colors text using the success color from config.
@@ -199,8 +201,8 @@ pub fn warning(text: &str) -> String {
 ///
 /// # Returns
 /// * `String` - The text colored in the success color
-pub fn success(text: &str) -> String {
-    color_string(text, "success")
+pub fn success(text: &str, config: &Config) -> String {
+    color_string(text, "success", config)
 }
 
 /// Colors text using the warning color from config for error messages.
@@ -214,8 +216,8 @@ pub fn success(text: &str) -> String {
 /// # Returns
 /// * `String` - The text colored in the warning color
 #[allow(dead_code)]
-fn error(text: &str) -> String {
-    color_string(text, "warning")
+fn error(text: &str, config: &Config) -> String {
+    color_string(text, "warning", config)
 }
 
 /// Colors text using the question color from config.
@@ -228,8 +230,8 @@ fn error(text: &str) -> String {
 ///
 /// # Returns
 /// * `String` - The text colored in the question color
-fn question(text: &str) -> String {
-    color_string(text, "question")
+fn question(text: &str, config: &Config) -> String {
+    color_string(text, "question", config)
 }
 
 /// Prints the final output of a successful decoding operation.
@@ -248,8 +250,8 @@ fn question(text: &str) -> String {
 ///
 /// # Panics
 /// Panics if there is an error writing to file when output_method is set to a file
-pub fn program_exiting_successful_decoding(result: DecoderResult) {
-    let config = crate::config::get_config();
+pub fn program_exiting_successful_decoding(result: DecoderResult, config: &Config) {
+    // config passed as argument
     if config.api_mode {
         return;
     }
@@ -265,7 +267,7 @@ pub fn program_exiting_successful_decoding(result: DecoderResult) {
         .collect::<Vec<_>>()
         .join(" → ");
 
-    let decoded_path_coloured = statement(&decoded_path, Some("informational"));
+    let decoded_path_coloured = statement(&decoded_path, Some("informational"), config);
     let decoded_path_string = if !decoded_path.contains('→') {
         // handles case where only 1 decoder is used
         format!("the decoder used is {decoded_path_coloured}")
@@ -298,7 +300,7 @@ pub fn program_exiting_successful_decoding(result: DecoderResult) {
                     "{} of the plaintext is invisible characters, would you like to save to a file instead? (y/N)", 
                     invis_char_percentage_string.white().bold()
                 )
-            )
+            , config)
         );
         let reply: String = read!("{}\n");
         let result = reply.to_ascii_lowercase().starts_with('y');
@@ -313,7 +315,7 @@ pub fn program_exiting_successful_decoding(result: DecoderResult) {
             }
             println!(
                 "Outputting plaintext to file: {}\n\n{}",
-                statement(&file_path, None),
+                statement(&file_path, None, config),
                 decoded_path_string
             );
             write(file_path, &plaintext[0]).expect("Error writing to file.");
@@ -322,7 +324,7 @@ pub fn program_exiting_successful_decoding(result: DecoderResult) {
     }
     println!(
         "The plaintext is:\n{}\n{}",
-        success(&plaintext[0]),
+        success(&plaintext[0], config),
         decoded_path_string
     );
 }
@@ -335,8 +337,8 @@ pub fn program_exiting_successful_decoding(result: DecoderResult) {
 /// # Note
 /// This function automatically calculates the total number of attempts
 /// based on the available decoders and the depth parameter.
-pub fn decoded_how_many_times(depth: u32) {
-    let config = crate::config::get_config();
+pub fn decoded_how_many_times(depth: u32, config: &Config) {
+    // config passed as argument
     if config.api_mode {
         return;
     }
@@ -347,7 +349,7 @@ pub fn decoded_how_many_times(depth: u32) {
     let decoded_times_int = depth * (decoders.components.len() as u32 + 40); //TODO 40 is how many decoders we have. Calculate automatically
     println!(
         "\n🥳 Ares has decoded {} times.\n",
-        statement(&decoded_times_int.to_string(), None)
+        statement(&decoded_times_int.to_string(), None, config)
     );
 }
 
@@ -360,11 +362,11 @@ pub fn decoded_how_many_times(depth: u32) {
 /// # Note
 /// This function is only called when human checking is enabled and
 /// not in API mode.
-pub fn human_checker_check(description: &str, text: &str) {
+pub fn human_checker_check(description: &str, text: &str, config: &Config) {
     println!(
         "🕵️ I think the plaintext is {}.\nPossible plaintext: '{}' (y/N): ",
-        statement(description, Some("informational")),
-        statement(text, Some("informational"))
+        statement(description, Some("informational"), config),
+        statement(text, Some("informational"), config)
     );
 }
 
@@ -375,15 +377,15 @@ pub fn human_checker_check(description: &str, text: &str) {
 ///
 /// # Note
 /// This message is suppressed in API mode.
-pub fn failed_to_decode() {
-    let config = crate::config::get_config();
+pub fn failed_to_decode(config: &Config) {
+    // config passed as argument
     if config.api_mode {
         return;
     }
 
     println!(
         "{}",
-        warning("⛔️ Ares has failed to decode the text.\nIf you want more help, please ask in #coded-messages in our Discord http://discord.skerritt.blog")
+        warning("⛔️ Ares has failed to decode the text.\nIf you want more help, please ask in #coded-messages in our Discord http://discord.skerritt.blog", config)
     );
 }
 
@@ -395,8 +397,8 @@ pub fn failed_to_decode() {
 ///
 /// # Note
 /// Progress updates are shown every 5 seconds until the duration is reached.
-pub fn countdown_until_program_ends(seconds_spent_running: u32, duration: u32) {
-    let config = crate::config::get_config();
+pub fn countdown_until_program_ends(seconds_spent_running: u32, duration: u32, config: &Config) {
+    // config passed as argument
     if config.api_mode {
         return;
     }
@@ -407,8 +409,8 @@ pub fn countdown_until_program_ends(seconds_spent_running: u32, duration: u32) {
         }
         println!(
             "{} seconds have passed. {} remaining",
-            statement(&seconds_spent_running.to_string(), None),
-            statement(&time_left.to_string(), None)
+            statement(&seconds_spent_running.to_string(), None, config),
+            statement(&time_left.to_string(), None, config)
         );
     }
 }
@@ -417,12 +419,12 @@ pub fn countdown_until_program_ends(seconds_spent_running: u32, duration: u32) {
 ///
 /// This function is called when the input passes plaintext detection
 /// and no decoding is necessary.
-pub fn return_early_because_input_text_is_plaintext() {
-    let config = crate::config::get_config();
+pub fn return_early_because_input_text_is_plaintext(config: &Config) {
+    // config passed as argument
     if config.api_mode {
         return;
     }
-    println!("{}", success("Your input text is the plaintext 🥳"));
+    println!("{}", success("Your input text is the plaintext 🥳", config));
 }
 
 /// Handles the error case of receiving both file and text input.
@@ -430,8 +432,8 @@ pub fn return_early_because_input_text_is_plaintext() {
 /// # Panics
 /// This function always panics with a message explaining the input conflict.
 /// Only used in CLI mode.
-pub fn panic_failure_both_input_and_fail_provided() {
-    let config = crate::config::get_config();
+pub fn panic_failure_both_input_and_fail_provided(config: &Config) {
+    // config passed as argument
     if config.api_mode {
         return;
     }
@@ -443,8 +445,8 @@ pub fn panic_failure_both_input_and_fail_provided() {
 /// # Panics
 /// This function always panics with a message explaining the missing input.
 /// Only used in CLI mode.
-pub fn panic_failure_no_input_provided() {
-    let config = crate::config::get_config();
+pub fn panic_failure_no_input_provided(config: &Config) {
+    // config passed as argument
     if config.api_mode {
         return;
     }
@@ -458,8 +460,8 @@ pub fn panic_failure_no_input_provided() {
 ///
 /// # Note
 /// This warning is suppressed in API mode.
-pub fn warning_unknown_config_key(key: &str) {
-    let config = crate::config::get_config();
+pub fn warning_unknown_config_key(key: &str, config: &Config) {
+    // config passed as argument
     if config.api_mode {
         return;
     }
@@ -468,7 +470,7 @@ pub fn warning_unknown_config_key(key: &str) {
         warning(&format!(
             "Unknown configuration key found in config file: {}",
             key
-        ))
+        ), config)
     );
 }
 
@@ -476,30 +478,30 @@ pub fn warning_unknown_config_key(key: &str) {
 ///
 /// # Panics
 /// Panics if it fails to read from stdin when prompting the user.
-pub fn display_top_results(results: &[PlaintextResult]) {
-    let config = crate::config::get_config();
+pub fn display_top_results(results: &[PlaintextResult], config: &Config) {
+    // config passed as argument
     if config.api_mode {
         return;
     }
 
     if results.is_empty() {
-        println!("{}", success("No potential plaintexts found."));
+        println!("{}", success("No potential plaintexts found.", config));
         return;
     }
 
-    println!("{}", success("\n🎊 List of Possible Plaintexts 🎊"));
+    println!("{}", success("\n🎊 List of Possible Plaintexts 🎊", config));
     println!(
         "{}",
         success(&format!(
             "Found {} potential plaintext results:",
             results.len()
-        ))
+        ), config)
     );
 
     if results.len() > 10 {
         // ask the user if they want to write to a file
-        println!("{}", warning("There are more than 10 possible plaintexts. I think you should write them to a file."));
-        println!("{}", question("Would you like to write to a file? (y/N)"));
+        println!("{}", warning("There are more than 10 possible plaintexts. I think you should write them to a file.", config));
+        println!("{}", question("Would you like to write to a file? (y/N)", config));
         let mut input = String::new();
         std::io::stdin()
             .read_line(&mut input)
@@ -511,8 +513,8 @@ pub fn display_top_results(results: &[PlaintextResult]) {
                 "{}",
                 question(&format!(
                     "Please enter a filename: (default: {}/ares_text.txt)",
-                    statement(&env::var("HOME").unwrap_or_default(), None)
-                ))
+                    statement(&env::var("HOME").unwrap_or_default(), None, config)
+                ), config)
             );
 
             let mut file_path = String::new();
@@ -537,8 +539,8 @@ pub fn display_top_results(results: &[PlaintextResult]) {
             }
 
             match write(&file_path, file_content) {
-                Ok(_) => println!("{}", success(&format!("Results written to {}", file_path))),
-                Err(e) => println!("{}", warning(&format!("Failed to write to file: {}", e))),
+                Ok(_) => println!("{}", success(&format!("Results written to {}", file_path), config)),
+                Err(e) => println!("{}", warning(&format!("Failed to write to file: {}", e), config)),
             }
 
             return;
@@ -548,21 +550,21 @@ pub fn display_top_results(results: &[PlaintextResult]) {
     for (i, result) in results.iter().enumerate() {
         println!(
             "{}",
-            success(&format!("Result #{}: {}", i + 1, result.text))
+            success(&format!("Result #{}: {}", i + 1, result.text), config)
         );
-        println!("{}", success(&format!("Decoder: {}", result.decoder_name)));
-        println!("{}", success(&format!("Checker: {}", result.checker_name)));
+        println!("{}", success(&format!("Decoder: {}", result.decoder_name), config));
+        println!("{}", success(&format!("Checker: {}", result.checker_name), config));
         println!(
             "{}",
-            success(&format!("Description: {}", result.description))
+            success(&format!("Description: {}", result.description), config)
         );
         if results.len() > 1 {
             // only print seperator if more than 1
-            println!("{}", success("---"));
+            println!("{}", success("---", config));
         }
     }
 
-    println!("{}", success("=== End of Top Results ===\n"));
+    println!("{}", success("=== End of Top Results ===\n", config));
 }
 
 #[test]

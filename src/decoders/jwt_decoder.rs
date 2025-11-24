@@ -3,6 +3,7 @@
 //! Call jwt_decoder.crack to use.
 
 use crate::checkers::CheckerTypes;
+use crate::config::Config;
 use super::crack_results::CrackResult;
 use super::interface::Crack;
 use super::interface::Decoder;
@@ -20,8 +21,7 @@ pub struct JwtDecoder;
 impl Crack for Decoder<JwtDecoder> {
     fn new() -> Decoder<JwtDecoder> {
         Decoder {
-            name: "JWT",
-            description: "Decodes JSON Web Tokens (header and payload).",
+            name: "JWT", description: "Decodes JSON Web Tokens (header and payload, &crate::config::Config::default()).",
             link: "https://jwt.io/",
             tags: vec!["jwt", "token", "json", "web", "decoder"],
             popularity: 0.8,
@@ -30,7 +30,7 @@ impl Crack for Decoder<JwtDecoder> {
     }
 
     /// This function does the actual decoding
-    fn crack(&self, text: &str, checker: &CheckerTypes) -> CrackResult {
+    fn crack(&self, text: &str, checker: &CheckerTypes, config: &Config) -> CrackResult {
         trace!("Trying JWT with text {:?}", text);
         let mut results = CrackResult::new(self, text.to_string());
         
@@ -57,7 +57,7 @@ impl Crack for Decoder<JwtDecoder> {
                 // However, we should check if the checker accepts it or if we just force it.
                 // Usually JWT content is interesting enough to return.
                 
-                let mut checker_result = checker.check(&decoded);
+                let mut checker_result = checker.check(&decoded, config);
                 // Force success since we successfully decoded a JWT structure
                 checker_result.is_identified = true;
                 results.unencrypted_text = Some(vec![decoded]);
@@ -137,7 +137,7 @@ mod tests {
         // Signature: SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c
         let jwt = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c";
         
-        let result = decoder.crack(jwt, &get_athena_checker());
+        let result = decoder.crack(jwt, &get_athena_checker(), &crate::config::Config::default());
         assert!(result.unencrypted_text.is_some());
         let text = &result.unencrypted_text.unwrap()[0];
         assert!(text.contains("John Doe"));

@@ -2,6 +2,7 @@ use super::crack_results::CrackResult;
 use super::interface::Crack;
 use super::interface::Decoder;
 use crate::checkers::CheckerTypes;
+use crate::config::Config;
 
 use log::trace;
 use std::collections::HashMap;
@@ -21,7 +22,7 @@ impl Crack for Decoder<BrailleDecoder> {
         }
     }
 
-    fn crack(&self, text: &str, checker: &CheckerTypes) -> CrackResult {
+    fn crack(&self, text: &str, checker: &CheckerTypes, config: &Config) -> CrackResult {
         trace!("Trying braille with text {:?}", text);
         let mut results = CrackResult::new(self, text.to_string());
 
@@ -36,7 +37,7 @@ impl Crack for Decoder<BrailleDecoder> {
             return results; // unencrypted text is already None by default
         }
 
-        let checker_result = checker.check(&decoded_text);
+        let checker_result = checker.check(&decoded_text, config);
         if checker_result.is_identified {
             trace!("Found a match with braille");
             results.unencrypted_text = Some(vec![decoded_text]);
@@ -127,7 +128,7 @@ mod tests {
     #[test]
     fn braille_decodes_successfully() {
         let braille_decoder = Decoder::<BrailleDecoder>::new();
-        let result = braille_decoder.crack("⠓⠑⠇⠇⠕⠀⠺⠕⠗⠇⠙", &get_athena_checker());
+        let result = braille_decoder.crack("⠓⠑⠇⠇⠕⠀⠺⠕⠗⠇⠙", &get_athena_checker(), &crate::config::Config::default());
         assert_eq!(result.unencrypted_text.unwrap()[0], "hello world");
     }
 
@@ -135,7 +136,7 @@ mod tests {
     fn braille_handles_panic_if_empty_string() {
         let braille_decoder = Decoder::<BrailleDecoder>::new();
         let result = braille_decoder
-            .crack("", &get_athena_checker())
+            .crack("", &get_athena_checker(), &crate::config::Config::default())
             .unencrypted_text;
         assert!(result.is_none());
     }
@@ -146,7 +147,7 @@ mod tests {
         let test_string = "⠓⠑⠇⠇⠕⠀⠍⠽⠀⠝⠁⠍⠑⠀⠊⠎⠀⠃⠑⠑⠀⠁⠝⠙⠀⠊⠀⠇⠊⠅⠑⠀⠙⠕⠛⠀⠁⠝⠙⠀⠁⠏⠏⠇⠑⠀⠁⠝⠙⠀⠞⠗⠑⠑";
         let expected = "hello my name is bee and i like dog and apple and tree";
 
-        let result = braille_decoder.crack(test_string, &get_athena_checker());
+        let result = braille_decoder.crack(test_string, &get_athena_checker(), &crate::config::Config::default());
 
         assert!(result.unencrypted_text.is_some());
         assert_eq!(result.unencrypted_text.unwrap()[0].to_lowercase(), expected);
@@ -156,7 +157,7 @@ mod tests {
     fn test_braille_handles_invalid_chars() {
         let braille_decoder = Decoder::<BrailleDecoder>::new();
         let result = braille_decoder
-            .crack("123ABC", &get_athena_checker())
+            .crack("123ABC", &get_athena_checker(), &crate::config::Config::default())
             .unencrypted_text;
         assert!(result.is_none());
     }
@@ -165,7 +166,7 @@ mod tests {
     fn test_braille_handles_mixed_content() {
         let braille_decoder = Decoder::<BrailleDecoder>::new();
         let result = braille_decoder
-            .crack("⠓⠑⠇⠇⠕123", &get_athena_checker())
+            .crack("⠓⠑⠇⠇⠕123", &get_athena_checker(), &crate::config::Config::default())
             .unencrypted_text;
         assert!(result.is_some());
         assert_eq!(result.unwrap()[0], "hello123");

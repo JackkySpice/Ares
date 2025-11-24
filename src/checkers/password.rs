@@ -1,4 +1,5 @@
 use crate::checkers::checker_result::CheckResult;
+use crate::config::Config;
 use gibberish_or_not::{is_password, Sensitivity};
 use lemmeknow::Identifier;
 
@@ -24,7 +25,7 @@ impl Check for Checker<PasswordChecker> {
         }
     }
 
-    fn check(&self, text: &str) -> CheckResult {
+    fn check(&self, text: &str, _config: &Config) -> CheckResult {
         CheckResult {
             is_identified: is_password(text),
             text: text.to_string(),
@@ -53,21 +54,24 @@ mod tests {
     #[test]
     fn test_check_common_password() {
         let checker = Checker::<PasswordChecker>::new();
-        assert!(checker.check("123456").is_identified);
+        let config = crate::config::Config::default();
+        assert!(checker.check("123456", &config).is_identified);
     }
 
     #[test]
     fn test_check_not_password() {
         let checker = Checker::<PasswordChecker>::new();
-        assert!(!checker.check("not-a-common-password").is_identified);
+        let config = crate::config::Config::default();
+        assert!(!checker.check("not-a-common-password", &config).is_identified);
     }
 
     #[test]
     fn test_check_case_sensitive() {
         let checker = Checker::<PasswordChecker>::new();
+        let config = crate::config::Config::default();
         // Test exact matching with different cases
-        let original = checker.check("password").is_identified;
-        let uppercase = checker.check("PASSWORD").is_identified;
+        let original = checker.check("password", &config).is_identified;
+        let uppercase = checker.check("PASSWORD", &config).is_identified;
         assert!(original != uppercase, "Case sensitivity test failed");
     }
 

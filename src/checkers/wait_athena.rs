@@ -2,7 +2,7 @@
 /// While Athena exits immediately when a plaintext is found, WaitAthena continues checking and
 /// stores all plaintexts it finds until the timer expires.
 /// Unlike Athena, WaitAthena does not use the human checker and automatically accepts all potential plaintexts.
-use crate::{checkers::checker_result::CheckResult, config::get_config};
+use crate::{checkers::checker_result::CheckResult, config::Config};
 use gibberish_or_not::Sensitivity;
 use lemmeknow::Identifier;
 use log::trace;
@@ -39,15 +39,14 @@ impl Check for Checker<WaitAthena> {
         }
     }
 
-    fn check(&self, text: &str) -> CheckResult {
-        let config = get_config();
+    fn check(&self, text: &str, config: &Config) -> CheckResult {
 
         // If regex is specified, only run the regex checker
         // operates exactly the same as athena
         if config.regex.is_some() {
             trace!("running regex");
             let regex_checker = Checker::<RegexChecker>::new().with_sensitivity(self.sensitivity);
-            let regex_result = regex_checker.check(text);
+            let regex_result = regex_checker.check(text, config);
             if regex_result.is_identified {
                 let mut check_res = CheckResult::new(&regex_checker);
                 check_res.is_identified = true; // No human checker involvement
@@ -71,7 +70,7 @@ impl Check for Checker<WaitAthena> {
                 trace!("running wordlist checker");
                 let wordlist_checker =
                     Checker::<WordlistChecker>::new().with_sensitivity(self.sensitivity);
-                let wordlist_result = wordlist_checker.check(text);
+                let wordlist_result = wordlist_checker.check(text, config);
                 if wordlist_result.is_identified {
                     let mut check_res = CheckResult::new(&wordlist_checker);
                     check_res.is_identified = true; // No human checker involvement
@@ -94,7 +93,7 @@ impl Check for Checker<WaitAthena> {
             // In Ciphey if the user uses the regex checker all the other checkers turn off
             // This is because they are looking for one specific bit of information so will not want the other checkers
             let lemmeknow = Checker::<LemmeKnow>::new().with_sensitivity(self.sensitivity);
-            let lemmeknow_result = lemmeknow.check(text);
+            let lemmeknow_result = lemmeknow.check(text, config);
             if lemmeknow_result.is_identified {
                 let mut check_res = CheckResult::new(&lemmeknow);
                 check_res.is_identified = true; // No human checker involvement
@@ -114,7 +113,7 @@ impl Check for Checker<WaitAthena> {
             }
 
             let password = Checker::<PasswordChecker>::new().with_sensitivity(self.sensitivity);
-            let password_result = password.check(text);
+            let password_result = password.check(text, config);
             if password_result.is_identified {
                 let mut check_res = CheckResult::new(&password);
                 check_res.is_identified = true; // No human checker involvement
@@ -134,7 +133,7 @@ impl Check for Checker<WaitAthena> {
             }
 
             let english = Checker::<EnglishChecker>::new().with_sensitivity(self.sensitivity);
-            let english_result = english.check(text);
+            let english_result = english.check(text, config);
             if english_result.is_identified {
                 let mut check_res = CheckResult::new(&english);
                 check_res.is_identified = true; // No human checker involvement
@@ -175,13 +174,15 @@ mod tests {
     #[test]
     fn test_check_english_sentence() {
         let checker = Checker::<WaitAthena>::new();
-        assert!(checker.check("test valid english sentence").is_identified);
+        let config = crate::config::Config::default();
+        assert!(checker.check("test valid english sentence", &config).is_identified);
     }
 
     #[test]
     fn test_check_dictionary_word() {
         let checker = Checker::<WaitAthena>::new();
-        assert!(checker.check("exuberant").is_identified);
+        let config = crate::config::Config::default();
+        assert!(checker.check("exuberant", &config).is_identified);
     }
 
     #[test]

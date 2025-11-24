@@ -1,5 +1,6 @@
 use super::checker_type::{Check, Checker};
 use crate::checkers::checker_result::CheckResult;
+use crate::config::Config;
 use gibberish_or_not::Sensitivity;
 use lemmeknow::{Data, Identifier};
 
@@ -24,8 +25,8 @@ impl Check for Checker<LemmeKnow> {
         }
     }
 
-    fn check(&self, text: &str) -> CheckResult {
-        let lemmeknow_result = self.lemmeknow_config.identify(text);
+    fn check(&self, text: &str, config: &Config) -> CheckResult {
+        let lemmeknow_result = config.lemmeknow_config.identify(text);
         let mut is_identified = false;
         let mut description = "".to_string();
         if !lemmeknow_result.is_empty() {
@@ -69,15 +70,17 @@ mod tests {
     #[test]
     fn test_url_exact_match() {
         let checker = Checker::<LemmeKnow>::new().with_sensitivity(Sensitivity::Low);
-        assert!(checker.check("https://google.com").is_identified);
+        let config = crate::config::Config::default();
+        assert!(checker.check("https://google.com", &config).is_identified);
     }
 
     #[test]
     fn test_url_with_extra_text_fails() {
         let checker = Checker::<LemmeKnow>::new().with_sensitivity(Sensitivity::Low);
+        let config = crate::config::Config::default();
         assert!(
             !checker
-                .check("https://google.com and some text")
+                .check("https://google.com and some text", &config)
                 .is_identified
         );
     }
@@ -85,19 +88,22 @@ mod tests {
     #[test]
     fn test_ip_exact_match() {
         let checker = Checker::<LemmeKnow>::new().with_sensitivity(Sensitivity::Low);
-        assert!(checker.check("192.168.1.1").is_identified);
+        let config = crate::config::Config::default();
+        assert!(checker.check("192.168.1.1", &config).is_identified);
     }
 
     #[test]
     fn test_ip_with_extra_text_fails() {
         let checker = Checker::<LemmeKnow>::new().with_sensitivity(Sensitivity::Low);
-        assert!(!checker.check("IP is 192.168.1.1").is_identified);
+        let config = crate::config::Config::default();
+        assert!(!checker.check("IP is 192.168.1.1", &config).is_identified);
     }
 
     #[test]
     fn test_s3_path() {
         let checker = Checker::<LemmeKnow>::new().with_sensitivity(Sensitivity::Low);
-        assert!(checker.check("s3://bucket/path/key").is_identified);
+        let config = crate::config::Config::default();
+        assert!(checker.check("s3://bucket/path/key", &config).is_identified);
     }
 
     // Lemmeknow can only match if its an EXACT match
@@ -105,9 +111,10 @@ mod tests {
     #[test]
     fn test_bitcoin_with_extra_text_fails() {
         let checker = Checker::<LemmeKnow>::new().with_sensitivity(Sensitivity::Low);
+        let config = crate::config::Config::default();
         assert!(
             !checker
-                .check("BTC address: 1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2")
+                .check("BTC address: 1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2", &config)
                 .is_identified
         );
     }

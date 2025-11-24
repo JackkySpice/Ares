@@ -1,4 +1,5 @@
 use crate::checkers::CheckerTypes;
+use crate::config::Config;
 use crate::decoders::interface::check_string_success;
 
 use super::crack_results::CrackResult;
@@ -40,7 +41,7 @@ impl Crack for Decoder<A1Z26Decoder> {
     /// then decoding will fail.
     ///
     /// Note that the string `-1` decodes to `A` because the `-` is interpreted as a delimiter, not a negative sign.
-    fn crack(&self, text: &str, checker: &CheckerTypes) -> CrackResult {
+    fn crack(&self, text: &str, checker: &CheckerTypes, config: &Config) -> CrackResult {
         trace!("Trying A1Z26 with text {:?}", text);
 
         let decoded_text = decode_a1z26(text);
@@ -62,7 +63,7 @@ impl Crack for Decoder<A1Z26Decoder> {
             return results;
         }
 
-        let checker_result = checker.check(&decoded_text);
+        let checker_result = checker.check(&decoded_text, config);
         results.unencrypted_text = Some(vec![decoded_text]);
 
         results.update_checker(&checker_result);
@@ -133,6 +134,7 @@ mod tests {
     use crate::checkers::athena::Athena;
     use crate::checkers::checker_type::{Check, Checker};
     use crate::checkers::CheckerTypes;
+use crate::config::Config;
     use crate::decoders::interface::Crack;
 
     // helper for tests
@@ -144,21 +146,21 @@ mod tests {
     #[test]
     fn test_a1z26_crack() {
         let decoder = Decoder::<A1Z26Decoder>::new();
-        let result = decoder.crack("8 5 12 12 15", &get_athena_checker());
+        let result = decoder.crack("8 5 12 12 15", &get_athena_checker(), &crate::config::Config::default());
         assert_eq!(result.unencrypted_text.unwrap()[0], "HELLO");
     }
 
     #[test]
     fn test_a1z26_crack_empty_ctext() {
         let decoder = Decoder::<A1Z26Decoder>::new();
-        let result = decoder.crack("", &get_athena_checker());
+        let result = decoder.crack("", &get_athena_checker(), &crate::config::Config::default());
         assert_eq!(result.unencrypted_text, None);
     }
 
     #[test]
     fn test_pangram() {
         let decoder = Decoder::<A1Z26Decoder>::new();
-        let result = decoder.crack("20 8 5 17 21 9 3 11 2 18 15 23 14 6 15 24 10 21 13 16 5 4 15 22 5 18 20 8 5 12 1 26 25 4 15 7", &get_athena_checker());
+        let result = decoder.crack("20 8 5 17 21 9 3 11 2 18 15 23 14 6 15 24 10 21 13 16 5 4 15 22 5 18 20 8 5 12 1 26 25 4 15 7", &get_athena_checker(), &crate::config::Config::default());
         assert_eq!(
             result.unencrypted_text.unwrap()[0],
             "THEQUICKBROWNFOXJUMPEDOVERTHELAZYDOG"
@@ -168,49 +170,49 @@ mod tests {
     #[test]
     fn test_empty_ctext() {
         let decoder = Decoder::<A1Z26Decoder>::new();
-        let result = decoder.crack("", &get_athena_checker());
+        let result = decoder.crack("", &get_athena_checker(), &crate::config::Config::default());
         assert_eq!(result.unencrypted_text, None);
     }
 
     #[test]
     fn test_whitespace_1() {
         let decoder = Decoder::<A1Z26Decoder>::new();
-        let result = decoder.crack(" ", &get_athena_checker());
+        let result = decoder.crack(" ", &get_athena_checker(), &crate::config::Config::default());
         assert_eq!(result.unencrypted_text, None);
     }
 
     #[test]
     fn test_whitespace_2() {
         let decoder = Decoder::<A1Z26Decoder>::new();
-        let result = decoder.crack("  ", &get_athena_checker());
+        let result = decoder.crack("  ", &get_athena_checker(), &crate::config::Config::default());
         assert_eq!(result.unencrypted_text, None);
     }
 
     #[test]
     fn test_delimiters_only() {
         let decoder = Decoder::<A1Z26Decoder>::new();
-        let result = decoder.crack(" \t-:,;\n \r\n \n\r \r ", &get_athena_checker());
+        let result = decoder.crack(" \t-:, ;\n \r\n \n\r \r ", &get_athena_checker(), &crate::config::Config::default());
         assert_eq!(result.unencrypted_text, None);
     }
 
     #[test]
     fn test_invalid_chars() {
         let decoder = Decoder::<A1Z26Decoder>::new();
-        let result = decoder.crack("1 2 3 x 4 5 6", &get_athena_checker());
+        let result = decoder.crack("1 2 3 x 4 5 6", &get_athena_checker(), &crate::config::Config::default());
         assert_eq!(result.unencrypted_text, None);
     }
 
     #[test]
     fn test_zero() {
         let decoder = Decoder::<A1Z26Decoder>::new();
-        let result = decoder.crack("0", &get_athena_checker());
+        let result = decoder.crack("0", &get_athena_checker(), &crate::config::Config::default());
         assert_eq!(result.unencrypted_text, None);
     }
 
     #[test]
     fn test_large_number() {
         let decoder = Decoder::<A1Z26Decoder>::new();
-        let result = decoder.crack("27", &get_athena_checker());
+        let result = decoder.crack("27", &get_athena_checker(), &crate::config::Config::default());
         assert_eq!(result.unencrypted_text, None);
     }
 
@@ -218,8 +220,7 @@ mod tests {
     fn test_excessive_number() {
         let decoder = Decoder::<A1Z26Decoder>::new();
         let result = decoder.crack(
-            "1234567890123456789012345678901234567890",
-            &get_athena_checker(),
+            "1234567890123456789012345678901234567890", &get_athena_checker(), &crate::config::Config::default()
         );
         assert_eq!(result.unencrypted_text, None);
     }
@@ -227,49 +228,49 @@ mod tests {
     #[test]
     fn test_fractional_number() {
         let decoder = Decoder::<A1Z26Decoder>::new();
-        let result = decoder.crack("3.5", &get_athena_checker());
+        let result = decoder.crack("3.5", &get_athena_checker(), &crate::config::Config::default());
         assert_eq!(result.unencrypted_text, None);
     }
 
     #[test]
     fn test_short_ctext() {
         let decoder = Decoder::<A1Z26Decoder>::new();
-        let result = decoder.crack("9", &get_athena_checker());
+        let result = decoder.crack("9", &get_athena_checker(), &crate::config::Config::default());
         assert_eq!(result.unencrypted_text.unwrap()[0], "I");
     }
 
     #[test]
     fn test_short_ctext_extra_delimiters_1() {
         let decoder = Decoder::<A1Z26Decoder>::new();
-        let result = decoder.crack(" 9 ", &get_athena_checker());
+        let result = decoder.crack(" 9 ", &get_athena_checker(), &crate::config::Config::default());
         assert_eq!(result.unencrypted_text.unwrap()[0], "I");
     }
 
     #[test]
     fn test_short_ctext_extra_delimiters_2() {
         let decoder = Decoder::<A1Z26Decoder>::new();
-        let result = decoder.crack("-9", &get_athena_checker());
+        let result = decoder.crack("-9", &get_athena_checker(), &crate::config::Config::default());
         assert_eq!(result.unencrypted_text.unwrap()[0], "I");
     }
 
     #[test]
     fn test_short_ctext_extra_delimiters_3() {
         let decoder = Decoder::<A1Z26Decoder>::new();
-        let result = decoder.crack("9\n", &get_athena_checker());
+        let result = decoder.crack("9\n", &get_athena_checker(), &crate::config::Config::default());
         assert_eq!(result.unencrypted_text.unwrap()[0], "I");
     }
 
     #[test]
     fn test_short_ctext_extra_delimiters_4() {
         let decoder = Decoder::<A1Z26Decoder>::new();
-        let result = decoder.crack(":\n-\t,9;\r,", &get_athena_checker());
+        let result = decoder.crack(":\n-\t, 9;\r,", &get_athena_checker(), &crate::config::Config::default());
         assert_eq!(result.unencrypted_text.unwrap()[0], "I");
     }
 
     #[test]
     fn test_delimited_ctext() {
         let decoder = Decoder::<A1Z26Decoder>::new();
-        let result = decoder.crack(",8-5:12,12;15\t23\r15\n18:,12-;4-", &get_athena_checker());
+        let result = decoder.crack(", 8-5:12,12;15\t23\r15\n18:,12-;4-", &get_athena_checker(), &crate::config::Config::default());
         assert_eq!(result.unencrypted_text.unwrap()[0], "HELLOWORLD");
     }
 }

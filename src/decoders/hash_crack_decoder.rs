@@ -3,6 +3,7 @@
 //! Call hash_crack_decoder.crack to use.
 
 use crate::checkers::CheckerTypes;
+use crate::config::Config;
 use crate::decoders::interface::check_string_success;
 use super::crack_results::CrackResult;
 use super::interface::Crack;
@@ -23,8 +24,7 @@ pub struct HashCrackDecoder;
 impl Crack for Decoder<HashCrackDecoder> {
     fn new() -> Decoder<HashCrackDecoder> {
         Decoder {
-            name: "HashCrack",
-            description: "Cracks hashes (MD5, SHA1, SHA256) using a dictionary attack.",
+            name: "HashCrack", description: "Cracks hashes (MD5, SHA1, SHA256, &crate::config::Config::default()) using a dictionary attack.",
             link: "https://en.wikipedia.org/wiki/Password_cracking",
             tags: vec!["hash", "md5", "sha1", "sha256", "cracker", "dictionary", "decoder"],
             popularity: 0.1, // Run last usually, or if detected
@@ -33,7 +33,7 @@ impl Crack for Decoder<HashCrackDecoder> {
     }
 
     /// This function does the actual decoding
-    fn crack(&self, text: &str, checker: &CheckerTypes) -> CrackResult {
+    fn crack(&self, text: &str, checker: &CheckerTypes, config: &Config) -> CrackResult {
         trace!("Trying HashCrack with text {:?}", text);
         let mut results = CrackResult::new(self, text.to_string());
         
@@ -97,7 +97,7 @@ impl Crack for Decoder<HashCrackDecoder> {
                      continue;
                 }
                 
-                let mut checker_result = checker.check(password);
+                let mut checker_result = checker.check(password, config);
                 // Force success since we found the password in our dictionary
                 checker_result.is_identified = true;
                 results.unencrypted_text = Some(vec![password.to_string()]);
@@ -152,7 +152,7 @@ mod tests {
         let decoder = Decoder::<HashCrackDecoder>::new();
         // MD5 of "password"
         let input = "5f4dcc3b5aa765d61d8327deb882cf99";
-        let result = decoder.crack(input, &get_athena_checker());
+        let result = decoder.crack(input, &get_athena_checker(), &crate::config::Config::default());
         assert_eq!(result.unencrypted_text.unwrap()[0], "password");
     }
 
@@ -161,7 +161,7 @@ mod tests {
         let decoder = Decoder::<HashCrackDecoder>::new();
         // SHA1 of "password"
         let input = "5baa61e4c9b93f3f0682250b6cf8331b7ee68fd8";
-        let result = decoder.crack(input, &get_athena_checker());
+        let result = decoder.crack(input, &get_athena_checker(), &crate::config::Config::default());
         assert_eq!(result.unencrypted_text.unwrap()[0], "password");
     }
 
@@ -170,7 +170,7 @@ mod tests {
         let decoder = Decoder::<HashCrackDecoder>::new();
         // SHA256 of "password"
         let input = "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8";
-        let result = decoder.crack(input, &get_athena_checker());
+        let result = decoder.crack(input, &get_athena_checker(), &crate::config::Config::default());
         assert_eq!(result.unencrypted_text.unwrap()[0], "password");
     }
 }

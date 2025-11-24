@@ -8,6 +8,7 @@
 //! 2. Distinct (26 letter): Unique codes for all.
 
 use crate::checkers::CheckerTypes;
+use crate::config::Config;
 use crate::decoders::interface::check_string_success;
 use crate::decoders::crack_results::CrackResult;
 use crate::decoders::interface::Crack;
@@ -23,8 +24,7 @@ pub struct BaconCipherDecoder;
 impl Crack for Decoder<BaconCipherDecoder> {
     fn new() -> Decoder<BaconCipherDecoder> {
         Decoder {
-            name: "Bacon Cipher",
-            description: "Bacon's cipher or the Baconian cipher is a method of steganography devised by Francis Bacon in 1605. A message is concealed in the presentation of text, rather than its content.",
+            name: "Bacon Cipher", description: "Bacon's cipher or the Baconian cipher is a method of steganography devised by Francis Bacon in 1605. A message is concealed in the presentation of text, rather than its content.",
             link: "https://en.wikipedia.org/wiki/Bacon%27s_cipher",
             tags: vec!["bacon", "steganography", "decoder", "classic"],
             popularity: 0.4,
@@ -32,7 +32,7 @@ impl Crack for Decoder<BaconCipherDecoder> {
         }
     }
 
-    fn crack(&self, text: &str, checker: &CheckerTypes) -> CrackResult {
+    fn crack(&self, text: &str, checker: &CheckerTypes, config: &Config) -> CrackResult {
         trace!("Trying Bacon Cipher with text {:?}", text);
         let mut results = CrackResult::new(self, text.to_string());
 
@@ -59,7 +59,7 @@ impl Crack for Decoder<BaconCipherDecoder> {
         }
 
         if !valid_results.is_empty() {
-            let checker_result = checker.check(&valid_results[0]); // Check first
+            let checker_result = checker.check(&valid_results[0], config); // Check first
             results.unencrypted_text = Some(valid_results);
             results.update_checker(&checker_result);
         }
@@ -166,7 +166,7 @@ mod tests {
     fn bacon_simple_24() {
         // "AAAAA" -> A
         let decoder = Decoder::<BaconCipherDecoder>::new();
-        let result = decoder.crack("AAAAA", &get_checker());
+        let result = decoder.crack("AAAAA", &get_checker(), &crate::config::Config::default());
         assert!(result.unencrypted_text.is_some());
         assert_eq!(result.unencrypted_text.unwrap()[0], "A");
     }
@@ -177,7 +177,7 @@ mod tests {
         // We expect TUSIKE (24) and STRIJE (26).
         let decoder = Decoder::<BaconCipherDecoder>::new();
         let input = "BAABA BAABB BAAAB ABAAA ABAAB AABAA";
-        let result = decoder.crack(input, &get_checker());
+        let result = decoder.crack(input, &get_checker(), &crate::config::Config::default());
         let valid = result.unencrypted_text.unwrap();
 
         let found = valid.iter().any(|s| s == "TUSIKE" || s == "STRIJE");

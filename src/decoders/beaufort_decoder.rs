@@ -2,6 +2,7 @@
 //! Performs error handling and returns a string
 
 use crate::checkers::CheckerTypes;
+use crate::config::Config;
 use crate::decoders::crack_results::CrackResult;
 use crate::decoders::interface::Crack;
 use crate::decoders::interface::Decoder;
@@ -40,8 +41,7 @@ pub struct BeaufortDecoder;
 impl Crack for Decoder<BeaufortDecoder> {
     fn new() -> Decoder<BeaufortDecoder> {
         Decoder {
-            name: "Beaufort Cipher",
-            description: "The Beaufort cipher is a polyalphabetic substitution cipher, similar to Vigenère, but using a slightly different tableau and encryption mechanism (reciprocal).",
+            name: "Beaufort Cipher", description: "The Beaufort cipher is a polyalphabetic substitution cipher, similar to Vigenère, but using a slightly different tableau and encryption mechanism (reciprocal, &crate::config::Config::default()).",
             link: "https://en.wikipedia.org/wiki/Beaufort_cipher",
             tags: vec!["beaufort", "substitution", "classic", "vigenere-variant"],
             popularity: 0.4,
@@ -49,7 +49,7 @@ impl Crack for Decoder<BeaufortDecoder> {
         }
     }
 
-    fn crack(&self, text: &str, checker: &CheckerTypes) -> CrackResult {
+    fn crack(&self, text: &str, checker: &CheckerTypes, config: &Config) -> CrackResult {
         trace!("Trying Beaufort Cipher with text {:?}", text);
         let mut results = CrackResult::new(self, text.to_string());
 
@@ -64,7 +64,7 @@ impl Crack for Decoder<BeaufortDecoder> {
              if key.trim().is_empty() { continue; }
 
              let decoded = decrypt_beaufort(text, &key);
-             let check_res = checker_with_sensitivity.check(&decoded);
+             let check_res = checker_with_sensitivity.check(&decoded, config);
              if check_res.is_identified {
                  results.unencrypted_text = Some(vec![decoded]);
                  results.key = Some(key);

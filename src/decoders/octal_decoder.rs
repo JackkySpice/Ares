@@ -2,6 +2,7 @@
 //! Performs error handling and returns a string
 
 use crate::checkers::CheckerTypes;
+use crate::config::Config;
 use crate::decoders::interface::check_string_success;
 use crate::decoders::crack_results::CrackResult;
 use crate::decoders::interface::Crack;
@@ -18,8 +19,7 @@ pub struct OctalDecoder;
 impl Crack for Decoder<OctalDecoder> {
     fn new() -> Decoder<OctalDecoder> {
         Decoder {
-            name: "Octal",
-            description: "Octal is a base-8 number system. It uses the digits 0 to 7. This decoder converts space-separated octal values to ASCII text.",
+            name: "Octal", description: "Octal is a base-8 number system. It uses the digits 0 to 7. This decoder converts space-separated octal values to ASCII text.",
             link: "https://en.wikipedia.org/wiki/Octal",
             tags: vec!["octal", "base8", "decoder", "numeric"],
             popularity: 0.5,
@@ -27,7 +27,7 @@ impl Crack for Decoder<OctalDecoder> {
         }
     }
 
-    fn crack(&self, text: &str, checker: &CheckerTypes) -> CrackResult {
+    fn crack(&self, text: &str, checker: &CheckerTypes, config: &Config) -> CrackResult {
         trace!("Trying Octal with text {:?}", text);
         let mut results = CrackResult::new(self, text.to_string());
         let decoded_text = decode_octal_no_error_handling(text);
@@ -43,7 +43,7 @@ impl Crack for Decoder<OctalDecoder> {
             return results;
         }
 
-        let checker_result = checker.check(&decoded_text);
+        let checker_result = checker.check(&decoded_text, config);
         results.unencrypted_text = Some(vec![decoded_text]);
         results.update_checker(&checker_result);
 
@@ -113,35 +113,35 @@ mod tests {
     #[test]
     fn octal_hello() {
         let decoder = Decoder::<OctalDecoder>::new();
-        let result = decoder.crack("110 145 154 154 157", &get_checker());
+        let result = decoder.crack("110 145 154 154 157", &get_checker(), &crate::config::Config::default());
         assert_eq!(result.unencrypted_text.unwrap()[0], "Hello");
     }
 
     #[test]
     fn octal_hello_chunked() {
         let decoder = Decoder::<OctalDecoder>::new();
-        let result = decoder.crack("110145154154157", &get_checker());
+        let result = decoder.crack("110145154154157", &get_checker(), &crate::config::Config::default());
         assert_eq!(result.unencrypted_text.unwrap()[0], "Hello");
     }
 
     #[test]
     fn octal_invalid_digit() {
         let decoder = Decoder::<OctalDecoder>::new();
-        let result = decoder.crack("110 148", &get_checker()); // 8 is invalid
+        let result = decoder.crack("110 148", &get_checker(), &crate::config::Config::default()); // 8 is invalid
         assert!(result.unencrypted_text.is_none());
     }
 
     #[test]
     fn octal_empty() {
         let decoder = Decoder::<OctalDecoder>::new();
-        assert!(decoder.crack("", &get_checker()).unencrypted_text.is_none());
+        assert!(decoder.crack("", &get_checker(), &crate::config::Config::default()).unencrypted_text.is_none());
     }
 
     #[test]
     fn octal_utf8() {
         // 303 266 -> \xC3\xB6 -> ö
         let decoder = Decoder::<OctalDecoder>::new();
-        let result = decoder.crack("303 266", &get_checker());
+        let result = decoder.crack("303 266", &get_checker(), &crate::config::Config::default());
         if let Some(texts) = result.unencrypted_text {
             assert_eq!(texts[0], "ö");
         } else {

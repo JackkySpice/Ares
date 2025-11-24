@@ -15,8 +15,8 @@ use std::path::Path;
 /// For the entire program
 /// It's access using a variable like configuration
 /// ```rust
-/// use ares::config::get_config;
-/// let config = get_config();
+/// use ares::config::Config;
+/// let config = Config::default();
 /// assert_eq!(config.verbose, 0);
 /// ```
 #[derive(Serialize, Deserialize)]
@@ -71,20 +71,6 @@ pub struct Config {
     pub model_path: Option<String>,
 }
 
-/// Cell for storing global Config
-static CONFIG: OnceCell<Config> = OnceCell::new();
-
-/// To initialize global config with custom values
-pub fn set_global_config(config: Config) {
-    CONFIG.set(config).ok(); // ok() used to make compiler happy about using Result
-}
-
-/// Get the global config.
-/// This will return default config if the config wasn't already initialized
-pub fn get_config() -> &'static Config {
-    CONFIG.get_or_init(Config::default)
-}
-
 /// Creates a default lemmeknow config
 const LEMMEKNOW_DEFAULT_CONFIG: Identifier = Identifier {
     min_rarity: 0.0_f32,
@@ -116,8 +102,8 @@ impl Default for Config {
     fn default() -> Self {
         let mut config = Config {
             verbose: 0,
-            lemmeknow_config: LEMMEKNOW_DEFAULT_CONFIG,
-            lemmeknow_min_rarity: 0.0_f32,
+            lemmeknow_config: Identifier::default().min_rarity(0.1),
+            lemmeknow_min_rarity: 0.1_f32,
             lemmeknow_max_rarity: 0.0_f32,
             lemmeknow_tags: vec![],
             lemmeknow_exclude_tags: vec![],
@@ -225,7 +211,7 @@ fn parse_toml_with_unknown_keys(contents: &str) -> Config {
         ];
         for key in table.keys() {
             if !known_keys.contains(&key.as_str()) {
-                crate::cli_pretty_printing::warning_unknown_config_key(key);
+                crate::cli_pretty_printing::warning_unknown_config_key(key, &Config::default());
             }
         }
     }
@@ -393,4 +379,35 @@ fn save_config_to_file(config: &Config, path: &std::path::Path) {
     let mut file = File::create(path).expect("Could not create config file");
     file.write_all(toml_string.as_bytes())
         .expect("Could not write to config file");
+}
+
+impl Clone for Config {
+    fn clone(&self) -> Self {
+        Config {
+            verbose: self.verbose,
+            lemmeknow_config: Identifier {
+                min_rarity: self.lemmeknow_config.min_rarity,
+                max_rarity: self.lemmeknow_config.max_rarity,
+                tags: self.lemmeknow_config.tags.clone(),
+                exclude_tags: self.lemmeknow_config.exclude_tags.clone(),
+                file_support: self.lemmeknow_config.file_support,
+                boundaryless: self.lemmeknow_config.boundaryless,
+            },
+            lemmeknow_min_rarity: self.lemmeknow_min_rarity,
+            lemmeknow_max_rarity: self.lemmeknow_max_rarity,
+            lemmeknow_tags: self.lemmeknow_tags.clone(),
+            lemmeknow_exclude_tags: self.lemmeknow_exclude_tags.clone(),
+            lemmeknow_boundaryless: self.lemmeknow_boundaryless,
+            human_checker_on: self.human_checker_on,
+            timeout: self.timeout,
+            top_results: self.top_results,
+            api_mode: self.api_mode,
+            regex: self.regex.clone(),
+            wordlist_path: self.wordlist_path.clone(),
+            wordlist: self.wordlist.clone(),
+            colourscheme: self.colourscheme.clone(),
+            enhanced_detection: self.enhanced_detection,
+            model_path: self.model_path.clone(),
+        }
+    }
 }

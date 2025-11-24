@@ -154,7 +154,7 @@ mod tests {
         }
 
         /// Mocked cracking function
-        fn crack(&self, text: &str, _checker: &CheckerTypes) -> CrackResult {
+        fn crack(&self, text: &str, _checker: &CheckerTypes, _config: &crate::config::Config) -> CrackResult {
             CrackResult::new(self, text.to_string())
         }
 
