@@ -117,8 +117,19 @@ pub fn setup_database(config: &crate::config::Config) -> Result<(), rusqlite::Er
     match DB_PATH.get() {
         Some(_path) => (),
         None => {
-            let db_result: Result<(), Option<std::path::PathBuf>> =
-                DB_PATH.set(Some(get_database_path()));
+            let path = get_database_path();
+            if let Some(parent) = path.parent() {
+                if !parent.exists() {
+                    if let Err(e) = std::fs::create_dir_all(parent) {
+                        crate::cli_pretty_printing::warning(
+                            &format!("Error creating database directory: {}", e),
+                            config,
+                        );
+                    }
+                }
+            }
+
+            let db_result: Result<(), Option<std::path::PathBuf>> = DB_PATH.set(Some(path));
             match db_result {
                 Ok(_) => (),
                 Err(_e) => {

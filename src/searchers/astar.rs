@@ -68,9 +68,6 @@ const PRUNE_THRESHOLD: usize = 10_000_000;
 /// Initial pruning threshold for dynamic adjustment
 const INITIAL_PRUNE_THRESHOLD: usize = PRUNE_THRESHOLD;
 
-/// Maximum depth for search (used for dynamic threshold adjustment)
-const MAX_DEPTH: u32 = 100;
-
 /// Number of nodes to process in parallel
 const PARALLEL_BATCH_SIZE: usize = 10;
 
