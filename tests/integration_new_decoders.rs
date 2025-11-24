@@ -1,20 +1,20 @@
-use ciphey::decoders::interface::Crack;
-use ciphey::decoders::interface::Decoder;
-use ciphey::checkers::{athena::Athena, checker_type::{Check, Checker}, CheckerTypes};
+use ares::decoders::interface::Crack;
+use ares::decoders::interface::Decoder;
+use ares::checkers::{athena::Athena, checker_type::{Check, Checker}, CheckerTypes};
 
-use ciphey::decoders::base62_decoder::Base62Decoder;
-use ciphey::decoders::ascii85_decoder::Ascii85Decoder;
-use ciphey::decoders::octal_decoder::OctalDecoder;
-use ciphey::decoders::decimal_decoder::DecimalDecoder;
-use ciphey::decoders::html_entity_decoder::HtmlEntityDecoder;
-use ciphey::decoders::punycode_decoder::PunycodeDecoder;
-use ciphey::decoders::quoted_printable_decoder::QuotedPrintableDecoder;
-use ciphey::decoders::uuencode_decoder::UUEncodeDecoder;
-use ciphey::decoders::base45_decoder::Base45Decoder;
-use ciphey::decoders::bacon_cipher_decoder::BaconCipherDecoder;
-use ciphey::decoders::base32hex_decoder::Base32HexDecoder;
-use ciphey::decoders::affine_cipher::AffineCipherDecoder;
-use ciphey::decoders::xor_decoder::XorDecoder;
+use ares::decoders::base62_decoder::Base62Decoder;
+use ares::decoders::ascii85_decoder::Ascii85Decoder;
+use ares::decoders::octal_decoder::OctalDecoder;
+use ares::decoders::decimal_decoder::DecimalDecoder;
+use ares::decoders::html_entity_decoder::HtmlEntityDecoder;
+use ares::decoders::punycode_decoder::PunycodeDecoder;
+use ares::decoders::quoted_printable_decoder::QuotedPrintableDecoder;
+use ares::decoders::uuencode_decoder::UUEncodeDecoder;
+use ares::decoders::base45_decoder::Base45Decoder;
+use ares::decoders::bacon_cipher_decoder::BaconCipherDecoder;
+use ares::decoders::base32hex_decoder::Base32HexDecoder;
+use ares::decoders::affine_cipher::AffineCipherDecoder;
+use ares::decoders::xor_decoder::XorDecoder;
 
 fn get_athena_checker() -> CheckerTypes {
     let athena_checker = Checker::<Athena>::new();

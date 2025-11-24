@@ -15,7 +15,7 @@ use std::path::Path;
 /// For the entire program
 /// It's access using a variable like configuration
 /// ```rust
-/// use ciphey::config::get_config;
+/// use ares::config::get_config;
 /// let config = get_config();
 /// assert_eq!(config.verbose, 0);
 /// ```
@@ -46,7 +46,7 @@ pub struct Config {
     /// Should the human checker be on?
     /// This asks yes/no for plaintext. Turn off for API
     pub human_checker_on: bool,
-    /// The timeout threshold before ciphey quits
+    /// The timeout threshold before Ares quits
     /// This is in seconds
     pub timeout: u32,
     /// Whether to collect all plaintexts until timeout expires
@@ -155,17 +155,17 @@ impl Default for Config {
     }
 }
 
-/// Get the path to the ciphey config file
+/// Get the path to the ares config file
 ///
 /// # Panics
 ///
 /// This function will panic if:
 /// - The home directory cannot be found
-/// - The ciphey directory cannot be created
+/// - The ares directory cannot be created
 pub fn get_config_file_path() -> std::path::PathBuf {
     let mut path = dirs::home_dir().expect("Could not find home directory");
-    path.push(".ciphey");
-    fs::create_dir_all(&path).expect("Could not create ciphey directory");
+    path.push(".ares");
+    fs::create_dir_all(&path).expect("Could not create ares directory");
     path.push("config.toml");
     path
 }
