@@ -256,7 +256,7 @@ fn expand_node(
                 // Handle successful decoding
                 for res in results {
                     if res.success {
-                        let mut decoders_used = current_node.state.path.clone();
+                        let decoders_used = current_node.state.path.clone();
                         let text = res.unencrypted_text.clone().unwrap_or_default();
                         // If we have multiple texts, we should probably take the first one or iterate?
                         // For success, usually we take the one that matched.
@@ -342,7 +342,7 @@ fn expand_node(
                             continue;
                         }
 
-                        let decoders_used = decoders_used_base.clone();
+                        let mut decoders_used = decoders_used_base.clone();
                         decoders_used.push(r.clone());
 
                         // Create new node with updated cost and heuristic
