@@ -274,7 +274,7 @@ fn expand_node(
 
                             // Calculate popularity bonus
                             let popularity = if let Some(decoder_box) = DECODER_MAP.get(res.decoder) {
-                                decoder_box.get::<()>().get_popularity()
+                                decoder_box.get().get_popularity()
                             } else {
                                 0.5
                             };

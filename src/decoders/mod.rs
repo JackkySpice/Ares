@@ -247,7 +247,7 @@ impl DecoderBox {
     }
 
     /// Getter method for DecoderBox to return the internal Box
-    pub fn get<T: 'static>(&self) -> &(dyn Crack + Sync + Send) {
+    pub fn get(&self) -> &(dyn Crack + Sync + Send) {
         self.value.as_ref()
     }
 }

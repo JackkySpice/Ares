@@ -90,7 +90,7 @@ fn get_timestamp() -> String {
 /// Returns the path to the database file
 fn get_database_path() -> std::path::PathBuf {
     let mut path = dirs::home_dir().expect("Could not find home directory");
-    path.push(".ciphey");
+    path.push(".ares");
     path.push("database.sqlite");
     path
 }

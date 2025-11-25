@@ -141,7 +141,7 @@ impl CheckerBox {
     }
 
     /// Getter method for CheckerBox to return the internal Box
-    pub fn get<T: 'static>(&self) -> &(dyn CheckInfo + Sync + Send) {
+    pub fn get(&self) -> &(dyn CheckInfo + Sync + Send) {
         self.value.as_ref()
     }
 }

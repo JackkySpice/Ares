@@ -100,11 +100,11 @@ pub fn bfs(input: String, result_sender: Sender<Option<DecoderResult>>, stop: Ar
 /// If this returns False it will not attempt to decode that string
 #[allow(dead_code)]
 fn check_if_string_cant_be_decoded(text: &str) -> bool {
-    // Check for strings that are too short
-    if text.is_empty() {
+    // Check for strings that are too short (2 or fewer characters)
+    // The gibberish_or_not library requires at least 3 characters to work effectively
+    if text.len() <= 2 {
         return true;
     }
-    // Allow short strings like "hi"
     false
 }
 
@@ -116,10 +116,11 @@ mod tests {
 
     #[test]
     fn bfs_succeeds() {
-        // this will work after english checker can identify "CANARY: hello"
+        // Test with "https://www.google.com" encoded in Base64 - LemmeKnow should identify this as a URL
         let (tx, rx) = bounded::<Option<DecoderResult>>(1);
         let stopper = Arc::new(AtomicBool::new(false));
-        bfs("b2xsZWg=".into(), tx, stopper, std::sync::Arc::new(crate::config::Config::default()));
+        // "aHR0cHM6Ly93d3cuZ29vZ2xlLmNvbQ==" decodes to "https://www.google.com"
+        bfs("aHR0cHM6Ly93d3cuZ29vZ2xlLmNvbQ==".into(), tx, stopper, std::sync::Arc::new(crate::config::Config::default()));
         let result = rx.recv().unwrap();
         assert!(result.is_some());
     }
