@@ -1,5 +1,6 @@
 //! Vigenère cipher decoder with automated key detection
 //! Uses Index of Coincidence (IoC) for key length detection and frequency analysis for key discovery
+//! Also uses dictionary attacks with common keywords for improved accuracy
 //! Returns Option<String> with the decrypted text if successful
 //! Uses Medium sensitivity for gibberish detection as the default.
 
@@ -7,6 +8,7 @@ use super::crack_results::CrackResult;
 use super::interface::{Crack, Decoder};
 use crate::checkers::CheckerTypes;
 use crate::config::Config;
+use crate::cryptanalysis::{ATTACK_WORDLIST, fitness_score, is_likely_english};
 use gibberish_or_not::Sensitivity;
 use log::{debug, trace};
 use once_cell::sync::Lazy;
@@ -88,15 +90,31 @@ impl Crack for Decoder<VigenereDecoder> {
 
         let checker_with_sensitivity = checker.with_sensitivity(Sensitivity::Medium);
         let mut checker_result = checker_with_sensitivity.check(text, config);
+        
+        // Track best result for fallback
+        let mut best_score = f64::MIN;
+        let mut best_plaintext = String::new();
+        let mut best_key = String::new();
 
+        // PHASE 1: Traditional bigram-based key breaking (most reliable for long texts)
+        // This is the original algorithm that works well
+        trace!("Phase 1: Bigram-based key length search");
         for key_length in 3..30 {
-            // Use Medium sensitivity for Vigenere decoder
             let key = break_vigenere(text, key_length);
             let key_str = key.as_str().trim();
             if key_str.is_empty() {
                 continue;
             }
             let decode_attempt = decrypt(text, key_str);
+            
+            // Track best result using cryptanalysis
+            let score = fitness_score(&decode_attempt);
+            if score > best_score {
+                best_score = score;
+                best_plaintext = decode_attempt.clone();
+                best_key = key.clone();
+            }
+            
             checker_result = checker_with_sensitivity.check(&decode_attempt, config);
             if checker_result.is_identified {
                 results.unencrypted_text = Some(vec![decode_attempt]);
@@ -104,6 +122,45 @@ impl Crack for Decoder<VigenereDecoder> {
                 results.key = Some(key);
                 return results;
             }
+        }
+
+        // PHASE 2: Try dictionary attack with common keywords (for CTF-style puzzles)
+        // Only if the bigram analysis didn't find anything
+        trace!("Phase 2: Dictionary attack with {} keywords", ATTACK_WORDLIST.len());
+        for keyword in ATTACK_WORDLIST.iter() {
+            if keyword.len() < 3 || keyword.len() > 15 {
+                continue;
+            }
+            
+            let decode_attempt = decrypt(text, keyword);
+            
+            // Quick check with cryptanalysis
+            let score = fitness_score(&decode_attempt);
+            if score > best_score {
+                best_score = score;
+                best_plaintext = decode_attempt.clone();
+                best_key = keyword.to_uppercase();
+            }
+            
+            // Check if this is valid plaintext
+            checker_result = checker_with_sensitivity.check(&decode_attempt, config);
+            if checker_result.is_identified {
+                debug!("Dictionary attack succeeded with key: {}", keyword);
+                results.unencrypted_text = Some(vec![decode_attempt]);
+                results.update_checker(&checker_result);
+                results.key = Some(keyword.to_uppercase());
+                return results;
+            }
+        }
+
+        // PHASE 3: If we have a good candidate from cryptanalysis, return it
+        if is_likely_english(&best_plaintext) && !best_key.is_empty() {
+            debug!("Using best cryptanalysis result with key: {}", best_key);
+            checker_result = checker_with_sensitivity.check(&best_plaintext, config);
+            results.unencrypted_text = Some(vec![best_plaintext]);
+            results.update_checker(&checker_result);
+            results.key = Some(best_key);
+            return results;
         }
 
         results.unencrypted_text = Some(vec![String::new()]);
@@ -191,17 +248,28 @@ fn break_vigenere(text: &str, key_length: usize) -> String {
 
 /// Decrypt text using the found key
 fn decrypt(text: &str, key: &str) -> String {
-    let key_bytes: Vec<u8> = key.bytes().collect();
+    // Normalize key to uppercase bytes
+    let key_bytes: Vec<u8> = key.to_uppercase().bytes().collect();
+    if key_bytes.is_empty() {
+        return text.to_string();
+    }
+    
     let mut result = String::with_capacity(text.len());
     let mut key_idx = 0;
 
     for c in text.chars() {
         if c.is_ascii_alphabetic() {
-            let shift = (key_bytes[key_idx % key_bytes.len()] - b'A') as i8;
-            let base = if c.is_ascii_uppercase() { b'A' } else { b'a' };
-            let pos = ((c as u8) - base) as i8;
-            let new_pos = ((pos - shift + 26) % 26) as u8;
-            result.push((base + new_pos) as char);
+            let key_byte = key_bytes[key_idx % key_bytes.len()];
+            // Only use valid uppercase letters as key characters
+            if key_byte >= b'A' && key_byte <= b'Z' {
+                let shift = (key_byte - b'A') as i8;
+                let base = if c.is_ascii_uppercase() { b'A' } else { b'a' };
+                let pos = ((c as u8) - base) as i8;
+                let new_pos = ((pos - shift + 26) % 26) as u8;
+                result.push((base + new_pos) as char);
+            } else {
+                result.push(c);
+            }
             key_idx += 1;
         } else {
             result.push(c);

@@ -108,6 +108,10 @@ pub mod rot5_decoder;
 pub mod rot18_decoder;
 /// Playfair cipher decoder
 pub mod playfair_decoder;
+/// Four Square cipher decoder
+pub mod four_square_decoder;
+/// Monoalphabetic substitution cipher solver using hill climbing
+pub mod monoalphabetic_solver;
 
 use atbash_decoder::AtbashDecoder;
 use base32_decoder::Base32Decoder;
@@ -162,6 +166,8 @@ use tap_code_decoder::TapCodeDecoder;
 use rot5_decoder::Rot5Decoder;
 use rot18_decoder::Rot18Decoder;
 use playfair_decoder::PlayfairDecoder;
+use four_square_decoder::FourSquareDecoder;
+use monoalphabetic_solver::MonoalphabeticSolver;
 
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
@@ -263,6 +269,10 @@ pub enum DecoderType {
     Rot18Decoder(rot18_decoder::Rot18Decoder),
     /// playfair decoder
     PlayfairDecoder(playfair_decoder::PlayfairDecoder),
+    /// four square decoder
+    FourSquareDecoder(four_square_decoder::FourSquareDecoder),
+    /// monoalphabetic solver
+    MonoalphabeticSolver(monoalphabetic_solver::MonoalphabeticSolver),
 }
 
 /// Wrapper struct to hold Decoders for DECODER_MAP
@@ -440,6 +450,14 @@ pub static DECODER_MAP: Lazy<HashMap<&str, DecoderBox>> = Lazy::new(|| {
         (
             "Playfair",
             DecoderBox::new(Decoder::<PlayfairDecoder>::new()),
+        ),
+        (
+            "Four Square",
+            DecoderBox::new(Decoder::<FourSquareDecoder>::new()),
+        ),
+        (
+            "Monoalphabetic",
+            DecoderBox::new(Decoder::<MonoalphabeticSolver>::new()),
         ),
     ])
 });

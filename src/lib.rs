@@ -44,6 +44,8 @@ pub mod filtration_system;
 mod searchers;
 /// Storage module for dictionaries and invisible characters
 pub mod storage;
+/// Cryptanalysis module for advanced cipher breaking
+pub mod cryptanalysis;
 /// Timer for internal use
 mod timer;
 

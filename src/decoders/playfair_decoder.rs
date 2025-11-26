@@ -1,10 +1,11 @@
 //! Playfair cipher decoder
 //! The Playfair cipher encrypts pairs of letters (digraphs) using a 5x5 key square.
-//! This implementation attempts to crack Playfair using frequency analysis
-//! and known patterns for common keywords.
+//! This implementation attempts to crack Playfair using dictionary attacks
+//! with a comprehensive 10000+ word wordlist and frequency analysis for scoring.
 
 use crate::checkers::CheckerTypes;
 use crate::config::Config;
+use crate::cryptanalysis::{ATTACK_WORDLIST, fitness_score, is_likely_english};
 use crate::decoders::interface::check_string_success;
 use gibberish_or_not::Sensitivity;
 
@@ -12,24 +13,16 @@ use super::crack_results::CrackResult;
 use super::interface::Crack;
 use super::interface::Decoder;
 
-use log::{info, trace};
+use log::{debug, info, trace};
 
 /// The Playfair decoder
 pub struct PlayfairDecoder;
-
-/// Common Playfair keywords to try
-const COMMON_KEYWORDS: [&str; 20] = [
-    "KEYWORD", "SECRET", "CIPHER", "PLAYFAIR", "CRYPTO",
-    "HIDDEN", "SECURE", "ENCODE", "DECODE", "PUZZLE",
-    "MYSTERY", "PRIVATE", "QUEEN", "KING", "MONARCH",
-    "CHARLES", "WILLIAM", "REPUBLIC", "KINGDOM", "PASSWORD",
-];
 
 impl Crack for Decoder<PlayfairDecoder> {
     fn new() -> Decoder<PlayfairDecoder> {
         Decoder {
             name: "Playfair",
-            description: "The Playfair cipher encrypts pairs of letters using a 5x5 key square. This decoder tries common keywords to break the cipher.",
+            description: "The Playfair cipher encrypts pairs of letters using a 5x5 key square. This decoder uses dictionary attacks with hundreds of keywords to break the cipher.",
             link: "https://en.wikipedia.org/wiki/Playfair_cipher",
             tags: vec!["playfair", "classical", "substitution", "digraph", "cipher"],
             popularity: 0.5,
@@ -61,21 +54,52 @@ impl Crack for Decoder<PlayfairDecoder> {
         }
 
         let checker_with_sensitivity = checker.with_sensitivity(Sensitivity::Low);
+        
+        // Track best result for cryptanalysis fallback
+        let mut best_score = f64::MIN;
+        let mut best_plaintext = String::new();
+        let mut best_key = String::new();
 
-        // Try common keywords
-        for keyword in COMMON_KEYWORDS.iter() {
+        // Use the comprehensive wordlist from cryptanalysis module
+        trace!("Trying {} keywords for Playfair", ATTACK_WORDLIST.len());
+        for keyword in ATTACK_WORDLIST.iter() {
+            // Skip very short keywords
+            if keyword.len() < 4 {
+                continue;
+            }
+            
             if let Some(decoded) = decrypt_playfair(&clean_text, keyword) {
                 let decoded_lower = decoded.to_lowercase();
+                
+                // Score the result using cryptanalysis
+                let score = fitness_score(&decoded_lower);
+                if score > best_score {
+                    best_score = score;
+                    best_plaintext = decoded_lower.clone();
+                    best_key = keyword.clone();
+                }
+                
                 if check_string_success(&decoded_lower, text) {
                     let checker_result = checker_with_sensitivity.check(&decoded_lower, config);
                     if checker_result.is_identified {
+                        debug!("Playfair dictionary attack succeeded with key: {}", keyword);
                         results.unencrypted_text = Some(vec![decoded_lower]);
                         results.update_checker(&checker_result);
-                        results.key = Some(keyword.to_string());
+                        results.key = Some(keyword.to_uppercase());
                         return results;
                     }
                 }
             }
+        }
+        
+        // If cryptanalysis found a good result, return it
+        if is_likely_english(&best_plaintext) && !best_key.is_empty() {
+            debug!("Using best cryptanalysis result for Playfair with key: {}", best_key);
+            let checker_result = checker_with_sensitivity.check(&best_plaintext, config);
+            results.unencrypted_text = Some(vec![best_plaintext]);
+            results.update_checker(&checker_result);
+            results.key = Some(best_key.to_uppercase());
+            return results;
         }
 
         info!("Failed to decode Playfair cipher");
