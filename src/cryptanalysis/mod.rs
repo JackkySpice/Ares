@@ -268,6 +268,7 @@ pub fn fitness_score(text: &str) -> f64 {
 }
 
 /// Check if text is likely English plaintext
+/// Handles both spaced text and concatenated text (like from Playfair cipher)
 pub fn is_likely_english(text: &str) -> bool {
     if text.len() < 10 {
         return false;
@@ -276,18 +277,25 @@ pub fn is_likely_english(text: &str) -> bool {
     let ic = index_of_coincidence(text);
     let chi_sq = chi_squared_score(text);
     let word_pct = word_score(text);
+    let bigram = quadgram_score(text);
     
     // IC should be close to English (0.0667)
-    let ic_ok = ic > 0.05 && ic < 0.08;
+    // Allow wider range for short texts
+    let ic_ok = ic > 0.04 && ic < 0.09;
     
     // Chi-squared should be relatively low
     let chi_ok = chi_sq < 100.0;
     
     // Should contain some recognizable words
-    let words_ok = word_pct > 20.0;
+    let words_ok = word_pct > 15.0;
     
-    // At least 2 of 3 conditions should pass
-    let score = (ic_ok as u8) + (chi_ok as u8) + (words_ok as u8);
+    // Bigram score should be reasonable (not too negative)
+    // This helps with concatenated text that has no word boundaries
+    let bigram_ok = bigram > -300.0;
+    
+    // At least 2 of 4 conditions should pass
+    // This allows concatenated text (no spaces) to pass via IC + chi_sq + bigram
+    let score = (ic_ok as u8) + (chi_ok as u8) + (words_ok as u8) + (bigram_ok as u8);
     score >= 2
 }
 
