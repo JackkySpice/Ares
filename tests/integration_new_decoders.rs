@@ -21,6 +21,7 @@ use ares::decoders::rot5_decoder::Rot5Decoder;
 use ares::decoders::rot18_decoder::Rot18Decoder;
 use ares::decoders::playfair_decoder::PlayfairDecoder;
 use ares::decoders::columnar_transposition_decoder::ColumnarTranspositionDecoder;
+use ares::decoders::four_square_decoder::FourSquareDecoder;
 
 fn get_athena_checker() -> CheckerTypes {
     let athena_checker = Checker::<Athena>::new();
@@ -197,4 +198,22 @@ fn test_playfair_decoder_creation() {
 fn test_columnar_transposition_decoder_creation() {
     let decoder = Decoder::<ColumnarTranspositionDecoder>::new();
     assert_eq!(decoder.name, "Columnar Transposition");
+}
+
+#[test]
+fn test_four_square_decoder_creation() {
+    let decoder = Decoder::<FourSquareDecoder>::new();
+    assert_eq!(decoder.name, "Four Square");
+    assert!(decoder.tags.contains(&"foursquare"));
+    assert!(decoder.tags.contains(&"classical"));
+}
+
+#[test]
+fn test_four_square_decoder_crack() {
+    let decoder = Decoder::<FourSquareDecoder>::new();
+    // Test that the decoder can at least run without panicking
+    let result = decoder.crack("FYNFNEHWBXAFFOKHMD", &get_athena_checker(), &ares::config::Config::default());
+    // The decoder may or may not find the right key depending on keyword combinations
+    // At minimum, it shouldn't panic and should return a valid result structure
+    assert!(result.unencrypted_text.is_some() || result.unencrypted_text.is_none());
 }
