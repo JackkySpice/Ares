@@ -364,7 +364,7 @@ mod tests {
     #[test]
     fn test_decoder_integration() {
         let decoder = Decoder::<FourSquareDecoder>::new();
-        let result = decoder.crack(
+        let _result = decoder.crack(
             "TESTINGFOURSQUARE",
             &get_athena_checker(),
             &Config::default(),
