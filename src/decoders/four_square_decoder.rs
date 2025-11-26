@@ -1,10 +1,12 @@
 //! Four Square cipher decoder
 //! The Four Square cipher is a polygraphic substitution cipher that uses four 5x5 matrices.
 //! Two matrices contain the standard alphabet, and two contain keyed alphabets.
-//! This implementation attempts to crack Four Square using common keywords.
+//! This implementation attempts to crack Four Square using dictionary attacks
+//! with an extensive wordlist and frequency analysis for scoring.
 
 use crate::checkers::CheckerTypes;
 use crate::config::Config;
+use crate::cryptanalysis::{EXTENDED_WORDLIST, fitness_score, is_likely_english};
 use crate::decoders::interface::check_string_success;
 use gibberish_or_not::Sensitivity;
 
@@ -12,25 +14,26 @@ use super::crack_results::CrackResult;
 use super::interface::Crack;
 use super::interface::Decoder;
 
-use log::{info, trace};
+use log::{debug, info, trace};
 
 /// The Four Square decoder
 pub struct FourSquareDecoder;
 
-/// Common keywords to try for the Four Square cipher
-/// We try combinations of these for the two keyed squares
-const COMMON_KEYWORDS: [&str; 20] = [
+/// Most common keywords for Four Square (used for same-key attempts)
+const TOP_KEYWORDS: [&str; 30] = [
     "EXAMPLE", "KEYWORD", "SECRET", "CIPHER", "CRYPTO",
     "HIDDEN", "SECURE", "ENCODE", "DECODE", "PUZZLE",
     "MYSTERY", "PRIVATE", "QUEEN", "KING", "MONARCH",
     "CHARLES", "WILLIAM", "REPUBLIC", "KINGDOM", "PASSWORD",
+    "HELLO", "WORLD", "TEST", "FLAG", "CODE",
+    "ALPHA", "BRAVO", "DELTA", "FOXTROT", "HOTEL",
 ];
 
 impl Crack for Decoder<FourSquareDecoder> {
     fn new() -> Decoder<FourSquareDecoder> {
         Decoder {
             name: "Four Square",
-            description: "The Four Square cipher uses four 5x5 matrices to encrypt pairs of letters. Two matrices use the standard alphabet and two use keyed alphabets. This decoder tries common keywords to break the cipher.",
+            description: "The Four Square cipher uses four 5x5 matrices to encrypt pairs of letters. Two matrices use the standard alphabet and two use keyed alphabets. This decoder uses dictionary attacks with hundreds of keyword combinations to break the cipher.",
             link: "https://en.wikipedia.org/wiki/Four-square_cipher",
             tags: vec!["foursquare", "classical", "substitution", "digraph", "cipher"],
             popularity: 0.4,
@@ -63,15 +66,64 @@ impl Crack for Decoder<FourSquareDecoder> {
         }
 
         let checker_with_sensitivity = checker.with_sensitivity(Sensitivity::Low);
+        
+        // Track best result for cryptanalysis fallback
+        let mut best_score = f64::MIN;
+        let mut best_plaintext = String::new();
+        let mut best_key = String::new();
 
-        // Try common keyword combinations
-        for keyword1 in COMMON_KEYWORDS.iter() {
-            for keyword2 in COMMON_KEYWORDS.iter() {
+        // PHASE 1: Try same keyword for both squares (most common case)
+        trace!("Phase 1: Trying same keyword for both squares");
+        for keyword in EXTENDED_WORDLIST.iter() {
+            if keyword.len() < 4 {
+                continue;
+            }
+            
+            if let Some(decoded) = decrypt_four_square(&clean_text, keyword, keyword) {
+                let decoded_lower = decoded.to_lowercase();
+                
+                let score = fitness_score(&decoded_lower);
+                if score > best_score {
+                    best_score = score;
+                    best_plaintext = decoded_lower.clone();
+                    best_key = keyword.clone();
+                }
+                
+                if check_string_success(&decoded_lower, text) {
+                    let checker_result = checker_with_sensitivity.check(&decoded_lower, config);
+                    if checker_result.is_identified {
+                        debug!("Four Square succeeded with same key: {}", keyword);
+                        results.unencrypted_text = Some(vec![decoded_lower]);
+                        results.update_checker(&checker_result);
+                        results.key = Some(keyword.to_uppercase());
+                        return results;
+                    }
+                }
+            }
+        }
+
+        // PHASE 2: Try top keyword combinations (limited to avoid O(n²) explosion)
+        trace!("Phase 2: Trying top keyword combinations");
+        for keyword1 in TOP_KEYWORDS.iter() {
+            for keyword2 in TOP_KEYWORDS.iter() {
+                if keyword1 == keyword2 {
+                    continue; // Already tried in phase 1
+                }
+                
                 if let Some(decoded) = decrypt_four_square(&clean_text, keyword1, keyword2) {
                     let decoded_lower = decoded.to_lowercase();
+                    
+                    let score = fitness_score(&decoded_lower);
+                    if score > best_score {
+                        best_score = score;
+                        best_plaintext = decoded_lower.clone();
+                        best_key = format!("{}/{}", keyword1, keyword2);
+                    }
+                    
                     if check_string_success(&decoded_lower, text) {
                         let checker_result = checker_with_sensitivity.check(&decoded_lower, config);
                         if checker_result.is_identified {
+                            debug!("Four Square succeeded with keys: {}/{}", keyword1, keyword2);
                             results.unencrypted_text = Some(vec![decoded_lower]);
                             results.update_checker(&checker_result);
                             results.key = Some(format!("{}/{}", keyword1, keyword2));
@@ -81,21 +133,15 @@ impl Crack for Decoder<FourSquareDecoder> {
                 }
             }
         }
-
-        // Also try same keyword for both squares
-        for keyword in COMMON_KEYWORDS.iter() {
-            if let Some(decoded) = decrypt_four_square(&clean_text, keyword, keyword) {
-                let decoded_lower = decoded.to_lowercase();
-                if check_string_success(&decoded_lower, text) {
-                    let checker_result = checker_with_sensitivity.check(&decoded_lower, config);
-                    if checker_result.is_identified {
-                        results.unencrypted_text = Some(vec![decoded_lower]);
-                        results.update_checker(&checker_result);
-                        results.key = Some(keyword.to_string());
-                        return results;
-                    }
-                }
-            }
+        
+        // PHASE 3: If cryptanalysis found a good result, return it
+        if is_likely_english(&best_plaintext) && !best_key.is_empty() {
+            debug!("Using best cryptanalysis result for Four Square with key: {}", best_key);
+            let checker_result = checker_with_sensitivity.check(&best_plaintext, config);
+            results.unencrypted_text = Some(vec![best_plaintext]);
+            results.update_checker(&checker_result);
+            results.key = Some(best_key.to_uppercase());
+            return results;
         }
 
         info!("Failed to decode Four Square cipher");

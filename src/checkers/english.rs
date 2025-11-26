@@ -1,11 +1,14 @@
 use crate::checkers::checker_result::CheckResult;
+use crate::cryptanalysis::{fitness_score, word_score, index_of_coincidence};
 use gibberish_or_not::{is_gibberish, Sensitivity};
 use lemmeknow::Identifier;
+use log::trace;
 
 use crate::checkers::checker_type::{Check, Checker};
 use crate::config::Config;
 
 /// Checks English plaintext.
+/// Enhanced with cryptanalysis-based detection as a secondary check.
 pub struct EnglishChecker;
 
 /// given an input, check every item in the array and return true if any of them match
@@ -27,23 +30,50 @@ impl Check for Checker<EnglishChecker> {
 
     fn check(&self, text: &str, config: &Config) -> CheckResult {
         // Normalize before checking
-        let text = normalise_string(text);
+        let normalized = normalise_string(text);
 
         // Get config to check if enhanced detection is enabled
         let is_enhanced = config.enhanced_detection;
         
+        // Primary check: gibberish-or-not library
         let is_gibberish_result = if is_enhanced {
-            !is_gibberish(&text, Sensitivity::High)
+            !is_gibberish(&normalized, Sensitivity::High)
         } else {
-            !is_gibberish(&text, self.sensitivity)
+            !is_gibberish(&normalized, self.sensitivity)
         };
+        
+        // Secondary check: cryptanalysis-based detection
+        // This helps catch cases where gibberish-or-not misses valid plaintext
+        // Only triggers for longer texts with strong English indicators
+        let cryptanalysis_check = if normalized.len() >= 30 {
+            let fitness = fitness_score(&normalized);
+            let word_pct = word_score(&normalized);
+            let ic = index_of_coincidence(&normalized);
+            
+            // Check if text has English-like characteristics
+            // Use stricter thresholds to avoid false positives
+            let has_good_ic = ic > 0.055 && ic < 0.075;
+            let has_words = word_pct > 40.0;  // Require more recognized words
+            let has_decent_fitness = fitness > -150.0;  // Stricter fitness threshold
+            
+            trace!("EnglishChecker crypto: fitness={:.2}, word_pct={:.2}, ic={:.4}", 
+                fitness, word_pct, ic);
+            
+            // Require ALL conditions for cryptanalysis-only detection
+            // This is a fallback, so we need to be sure
+            has_good_ic && has_words && has_decent_fitness
+        } else {
+            false
+        };
+        
+        // Combine both checks - if either passes, consider it English
+        let is_identified = is_gibberish_result || cryptanalysis_check;
 
-        log::trace!("EnglishChecker: Checking '{}'. Normalized: '{}'. Sensitivity: {:?}. Is Identified: {}", 
-            text, text, self.sensitivity, is_gibberish_result);
+        trace!("EnglishChecker: Checking '{}'. Normalized: '{}'. Sensitivity: {:?}. Gibberish: {}, Crypto: {}, Final: {}", 
+            text, normalized, self.sensitivity, is_gibberish_result, cryptanalysis_check, is_identified);
 
         let mut result = CheckResult {
-            // Use a more sensitive setting if enhanced detection is enabled
-            is_identified: is_gibberish_result,
+            is_identified,
             text: text.to_string(),
             checker_name: self.name,
             checker_description: self.description,
@@ -52,7 +82,7 @@ impl Check for Checker<EnglishChecker> {
         };
 
         // Handle edge case of very short strings after normalization
-        if text.len() < 2 {
+        if normalized.len() < 2 {
             // Reduced from 3 since normalization may remove punctuation
             result.is_identified = false;
         }
