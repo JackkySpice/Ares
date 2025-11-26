@@ -8,7 +8,7 @@ use super::crack_results::CrackResult;
 use super::interface::{Crack, Decoder};
 use crate::checkers::CheckerTypes;
 use crate::config::Config;
-use crate::cryptanalysis::{EXTENDED_WORDLIST, fitness_score, is_likely_english};
+use crate::cryptanalysis::{ATTACK_WORDLIST, fitness_score, is_likely_english};
 use gibberish_or_not::Sensitivity;
 use log::{debug, trace};
 use once_cell::sync::Lazy;
@@ -126,8 +126,8 @@ impl Crack for Decoder<VigenereDecoder> {
 
         // PHASE 2: Try dictionary attack with common keywords (for CTF-style puzzles)
         // Only if the bigram analysis didn't find anything
-        trace!("Phase 2: Dictionary attack with {} keywords", EXTENDED_WORDLIST.len());
-        for keyword in EXTENDED_WORDLIST.iter() {
+        trace!("Phase 2: Dictionary attack with {} keywords", ATTACK_WORDLIST.len());
+        for keyword in ATTACK_WORDLIST.iter() {
             if keyword.len() < 3 || keyword.len() > 15 {
                 continue;
             }

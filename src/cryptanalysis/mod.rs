@@ -1,47 +1,55 @@
 //! Cryptanalysis module for advanced cipher breaking
 //! 
 //! This module provides tools for:
-//! - Text scoring and fitness functions
+//! - Text scoring and fitness functions using the `common-words-all` crate
 //! - Dictionary/wordlist management for key attacks
 //! - Frequency analysis utilities
 //! - Hill climbing and optimization algorithms
 //! - Index of Coincidence calculations
 
+use common_words_all::generated::cwa_1grams_english::cwa_1grams_english;
 use once_cell::sync::Lazy;
 use std::collections::{HashMap, HashSet};
 
-/// Load the 10000 most common English words
-static ENGLISH_WORDS_10K: Lazy<Vec<&'static str>> = Lazy::new(|| {
-    include_str!("../storage/wordlists/english_10000.txt")
-        .lines()
-        .filter(|line| !line.is_empty() && line.len() >= 3)
-        .collect()
+/// Load common English words from the third-party crate (common-words-all)
+/// These are the 10,000 most common English words sorted by frequency
+pub static COMMON_ENGLISH_WORDS: Lazy<Vec<&'static str>> = Lazy::new(|| {
+    cwa_1grams_english.iter().map(|r| r.ngram).collect()
 });
 
-/// Load cipher-specific keywords
-static CIPHER_KEYWORDS: Lazy<Vec<&'static str>> = Lazy::new(|| {
-    include_str!("../storage/wordlists/cipher_keywords.txt")
-        .lines()
-        .filter(|line| !line.is_empty() && line.len() >= 3)
-        .collect()
+/// HashSet for fast word lookup
+pub static COMMON_ENGLISH_SET: Lazy<HashSet<&'static str>> = Lazy::new(|| {
+    COMMON_ENGLISH_WORDS.iter().cloned().collect()
 });
 
-/// Combined wordlist for cipher key attacks (lowercase)
+/// Attack wordlist - words suitable for cipher key attacks (4-15 chars)
+/// Includes both lowercase and uppercase versions
 pub static ATTACK_WORDLIST: Lazy<Vec<String>> = Lazy::new(|| {
     let mut words: Vec<String> = Vec::new();
     
-    // Add cipher keywords first (higher priority)
-    for word in CIPHER_KEYWORDS.iter() {
-        words.push(word.to_lowercase());
-        words.push(word.to_uppercase());
-    }
-    
-    // Add common English words (only those 4-15 chars - typical key length)
-    for word in ENGLISH_WORDS_10K.iter() {
-        if word.len() >= 4 && word.len() <= 15 {
+    // Add common English words (filter to typical key lengths)
+    for word in COMMON_ENGLISH_WORDS.iter() {
+        if word.len() >= 3 && word.len() <= 15 {
             words.push(word.to_lowercase());
             words.push(word.to_uppercase());
         }
+    }
+    
+    // Add cipher-specific keywords that might not be in common words
+    let cipher_keywords = [
+        "keyword", "secret", "cipher", "crypto", "hidden", "secure", "encode",
+        "decode", "puzzle", "mystery", "private", "password", "example", "playfair",
+        "vigenere", "caesar", "enigma", "turing", "cryptii", "hello", "world",
+        "test", "flag", "admin", "alpha", "bravo", "charlie", "delta", "echo",
+        "foxtrot", "golf", "hotel", "india", "juliet", "kilo", "lima", "mike",
+        "november", "oscar", "papa", "quebec", "romeo", "sierra", "tango",
+        "uniform", "victor", "whiskey", "xray", "yankee", "zulu", "republic",
+        "kingdom", "monarch", "empire", "system", "network", "security",
+    ];
+    
+    for keyword in cipher_keywords {
+        words.push(keyword.to_lowercase());
+        words.push(keyword.to_uppercase());
     }
     
     // Remove duplicates while preserving order
@@ -49,11 +57,6 @@ pub static ATTACK_WORDLIST: Lazy<Vec<String>> = Lazy::new(|| {
     words.retain(|w| seen.insert(w.clone()));
     
     words
-});
-
-/// Common English words for word detection (fast lookup)
-pub static COMMON_ENGLISH_SET: Lazy<HashSet<&'static str>> = Lazy::new(|| {
-    ENGLISH_WORDS_10K.iter().cloned().collect()
 });
 
 /// English letter frequencies (A-Z) as percentages
@@ -332,7 +335,9 @@ pub fn get_frequency_distribution(text: &str) -> [f64; 26] {
 
 /// Hill climbing optimizer for key search
 pub struct HillClimber {
+    /// Maximum iterations per restart
     pub max_iterations: usize,
+    /// Maximum number of restarts
     pub max_restarts: usize,
 }
 
@@ -346,6 +351,7 @@ impl Default for HillClimber {
 }
 
 impl HillClimber {
+    /// Create a new HillClimber with custom parameters
     pub fn new(max_iterations: usize, max_restarts: usize) -> Self {
         HillClimber {
             max_iterations,
@@ -372,14 +378,29 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_wordlist_loaded() {
-        assert!(ATTACK_WORDLIST.len() > 1000, "Wordlist should have >1000 words");
-        assert!(COMMON_ENGLISH_SET.len() > 5000, "English set should have >5000 words");
+    fn test_third_party_wordlist_loaded() {
+        // Verify the common-words-all crate is working
+        assert!(COMMON_ENGLISH_WORDS.len() > 5000, 
+            "Should have loaded >5000 common words, got {}", COMMON_ENGLISH_WORDS.len());
+        assert!(COMMON_ENGLISH_SET.contains("the"), "Should contain 'the'");
+        assert!(COMMON_ENGLISH_SET.contains("hello"), "Should contain 'hello'");
+    }
+
+    #[test]
+    fn test_attack_wordlist() {
+        assert!(ATTACK_WORDLIST.len() > 1000, 
+            "Attack wordlist should have >1000 words, got {}", ATTACK_WORDLIST.len());
+        
+        // Should contain cipher keywords
+        assert!(ATTACK_WORDLIST.iter().any(|w| w.to_lowercase() == "keyword"),
+            "Should contain 'keyword'");
+        assert!(ATTACK_WORDLIST.iter().any(|w| w.to_lowercase() == "example"),
+            "Should contain 'example'");
     }
 
     #[test]
     fn test_index_of_coincidence_english() {
-        let english_text = "The quick brown fox jumps over the lazy dog. The cat sat on the mat and looked at the birds flying in the sky.";
+        let english_text = "The quick brown fox jumps over the lazy dog. The cat sat on the mat.";
         let ic = index_of_coincidence(english_text);
         assert!(ic > 0.04 && ic < 0.09, "IC was {}", ic);
     }
