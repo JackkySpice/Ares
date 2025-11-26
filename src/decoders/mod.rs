@@ -95,6 +95,20 @@ pub mod xor_decoder;
 pub mod hash_crack_decoder;
 pub mod jwt_decoder;
 
+// Classical cipher decoders
+/// Polybius Square cipher decoder
+pub mod polybius_square_decoder;
+/// Columnar Transposition cipher decoder
+pub mod columnar_transposition_decoder;
+/// Tap Code (Prisoner's tap code) decoder
+pub mod tap_code_decoder;
+/// ROT5 decoder (rotates digits by 5)
+pub mod rot5_decoder;
+/// ROT18 decoder (combines ROT13 and ROT5)
+pub mod rot18_decoder;
+/// Playfair cipher decoder
+pub mod playfair_decoder;
+
 use atbash_decoder::AtbashDecoder;
 use base32_decoder::Base32Decoder;
 use base58_bitcoin_decoder::Base58BitcoinDecoder;
@@ -140,6 +154,14 @@ use beaufort_decoder::BeaufortDecoder;
 use xor_decoder::XorDecoder;
 use hash_crack_decoder::HashCrackDecoder;
 use jwt_decoder::JwtDecoder;
+
+// Use classical cipher decoders
+use polybius_square_decoder::PolybiusSquareDecoder;
+use columnar_transposition_decoder::ColumnarTranspositionDecoder;
+use tap_code_decoder::TapCodeDecoder;
+use rot5_decoder::Rot5Decoder;
+use rot18_decoder::Rot18Decoder;
+use playfair_decoder::PlayfairDecoder;
 
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
@@ -229,6 +251,18 @@ pub enum DecoderType {
     HashCrackDecoder(hash_crack_decoder::HashCrackDecoder),
     /// jwt decoder
     JwtDecoder(jwt_decoder::JwtDecoder),
+    /// polybius square decoder
+    PolybiusSquareDecoder(polybius_square_decoder::PolybiusSquareDecoder),
+    /// columnar transposition decoder
+    ColumnarTranspositionDecoder(columnar_transposition_decoder::ColumnarTranspositionDecoder),
+    /// tap code decoder
+    TapCodeDecoder(tap_code_decoder::TapCodeDecoder),
+    /// rot5 decoder
+    Rot5Decoder(rot5_decoder::Rot5Decoder),
+    /// rot18 decoder
+    Rot18Decoder(rot18_decoder::Rot18Decoder),
+    /// playfair decoder
+    PlayfairDecoder(playfair_decoder::PlayfairDecoder),
 }
 
 /// Wrapper struct to hold Decoders for DECODER_MAP
@@ -382,6 +416,30 @@ pub static DECODER_MAP: Lazy<HashMap<&str, DecoderBox>> = Lazy::new(|| {
         (
             "JWT",
             DecoderBox::new(Decoder::<JwtDecoder>::new()),
+        ),
+        (
+            "Polybius Square",
+            DecoderBox::new(Decoder::<PolybiusSquareDecoder>::new()),
+        ),
+        (
+            "Columnar Transposition",
+            DecoderBox::new(Decoder::<ColumnarTranspositionDecoder>::new()),
+        ),
+        (
+            "Tap Code",
+            DecoderBox::new(Decoder::<TapCodeDecoder>::new()),
+        ),
+        (
+            "ROT5",
+            DecoderBox::new(Decoder::<Rot5Decoder>::new()),
+        ),
+        (
+            "ROT18",
+            DecoderBox::new(Decoder::<Rot18Decoder>::new()),
+        ),
+        (
+            "Playfair",
+            DecoderBox::new(Decoder::<PlayfairDecoder>::new()),
         ),
     ])
 });
