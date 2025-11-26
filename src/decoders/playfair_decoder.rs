@@ -1,11 +1,11 @@
 //! Playfair cipher decoder
 //! The Playfair cipher encrypts pairs of letters (digraphs) using a 5x5 key square.
 //! This implementation attempts to crack Playfair using dictionary attacks
-//! with an extensive wordlist and frequency analysis for scoring.
+//! with a comprehensive 10000+ word wordlist and frequency analysis for scoring.
 
 use crate::checkers::CheckerTypes;
 use crate::config::Config;
-use crate::cryptanalysis::{EXTENDED_WORDLIST, fitness_score, is_likely_english};
+use crate::cryptanalysis::{ATTACK_WORDLIST, fitness_score, is_likely_english};
 use crate::decoders::interface::check_string_success;
 use gibberish_or_not::Sensitivity;
 
@@ -60,9 +60,9 @@ impl Crack for Decoder<PlayfairDecoder> {
         let mut best_plaintext = String::new();
         let mut best_key = String::new();
 
-        // Use the extended wordlist from cryptanalysis module
-        trace!("Trying {} keywords for Playfair", EXTENDED_WORDLIST.len());
-        for keyword in EXTENDED_WORDLIST.iter() {
+        // Use the comprehensive wordlist from cryptanalysis module
+        trace!("Trying {} keywords for Playfair", ATTACK_WORDLIST.len());
+        for keyword in ATTACK_WORDLIST.iter() {
             // Skip very short keywords
             if keyword.len() < 4 {
                 continue;

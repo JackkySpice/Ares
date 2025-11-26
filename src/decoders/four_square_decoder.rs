@@ -2,11 +2,11 @@
 //! The Four Square cipher is a polygraphic substitution cipher that uses four 5x5 matrices.
 //! Two matrices contain the standard alphabet, and two contain keyed alphabets.
 //! This implementation attempts to crack Four Square using dictionary attacks
-//! with an extensive wordlist and frequency analysis for scoring.
+//! with a comprehensive 10000+ word wordlist and frequency analysis for scoring.
 
 use crate::checkers::CheckerTypes;
 use crate::config::Config;
-use crate::cryptanalysis::{EXTENDED_WORDLIST, fitness_score, is_likely_english};
+use crate::cryptanalysis::{ATTACK_WORDLIST, fitness_score, is_likely_english};
 use crate::decoders::interface::check_string_success;
 use gibberish_or_not::Sensitivity;
 
@@ -18,16 +18,6 @@ use log::{debug, info, trace};
 
 /// The Four Square decoder
 pub struct FourSquareDecoder;
-
-/// Most common keywords for Four Square (used for same-key attempts)
-const TOP_KEYWORDS: [&str; 30] = [
-    "EXAMPLE", "KEYWORD", "SECRET", "CIPHER", "CRYPTO",
-    "HIDDEN", "SECURE", "ENCODE", "DECODE", "PUZZLE",
-    "MYSTERY", "PRIVATE", "QUEEN", "KING", "MONARCH",
-    "CHARLES", "WILLIAM", "REPUBLIC", "KINGDOM", "PASSWORD",
-    "HELLO", "WORLD", "TEST", "FLAG", "CODE",
-    "ALPHA", "BRAVO", "DELTA", "FOXTROT", "HOTEL",
-];
 
 impl Crack for Decoder<FourSquareDecoder> {
     fn new() -> Decoder<FourSquareDecoder> {
@@ -73,8 +63,8 @@ impl Crack for Decoder<FourSquareDecoder> {
         let mut best_key = String::new();
 
         // PHASE 1: Try same keyword for both squares (most common case)
-        trace!("Phase 1: Trying same keyword for both squares");
-        for keyword in EXTENDED_WORDLIST.iter() {
+        trace!("Phase 1: Trying {} keywords for Four Square", ATTACK_WORDLIST.len());
+        for keyword in ATTACK_WORDLIST.iter() {
             if keyword.len() < 4 {
                 continue;
             }
@@ -101,40 +91,8 @@ impl Crack for Decoder<FourSquareDecoder> {
                 }
             }
         }
-
-        // PHASE 2: Try top keyword combinations (limited to avoid O(n²) explosion)
-        trace!("Phase 2: Trying top keyword combinations");
-        for keyword1 in TOP_KEYWORDS.iter() {
-            for keyword2 in TOP_KEYWORDS.iter() {
-                if keyword1 == keyword2 {
-                    continue; // Already tried in phase 1
-                }
-                
-                if let Some(decoded) = decrypt_four_square(&clean_text, keyword1, keyword2) {
-                    let decoded_lower = decoded.to_lowercase();
-                    
-                    let score = fitness_score(&decoded_lower);
-                    if score > best_score {
-                        best_score = score;
-                        best_plaintext = decoded_lower.clone();
-                        best_key = format!("{}/{}", keyword1, keyword2);
-                    }
-                    
-                    if check_string_success(&decoded_lower, text) {
-                        let checker_result = checker_with_sensitivity.check(&decoded_lower, config);
-                        if checker_result.is_identified {
-                            debug!("Four Square succeeded with keys: {}/{}", keyword1, keyword2);
-                            results.unencrypted_text = Some(vec![decoded_lower]);
-                            results.update_checker(&checker_result);
-                            results.key = Some(format!("{}/{}", keyword1, keyword2));
-                            return results;
-                        }
-                    }
-                }
-            }
-        }
         
-        // PHASE 3: If cryptanalysis found a good result, return it
+        // PHASE 2: If cryptanalysis found a good result, return it
         if is_likely_english(&best_plaintext) && !best_key.is_empty() {
             debug!("Using best cryptanalysis result for Four Square with key: {}", best_key);
             let checker_result = checker_with_sensitivity.check(&best_plaintext, config);
