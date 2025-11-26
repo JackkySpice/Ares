@@ -138,7 +138,6 @@ pub fn perform_cracking(text: &str, config: Config) -> Option<DecoderResult> {
         Ok(cache_row) => match cache_row {
             Some(row) => {
                 log::debug!("Cache hit for text: {}", text);
-                log::debug!("Cache hit for text: {}", text);
                 let path_result: Result<Vec<CrackResult>, serde_json::Error> = row
                     .path
                     .iter()

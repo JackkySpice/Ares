@@ -243,8 +243,9 @@ pub fn generate_heuristic(
 /// Filtering out these strings early saves computational resources and
 /// prevents the search from exploring unproductive paths.
 pub fn check_if_string_cant_be_decoded(text: &str) -> bool {
-    // Check for strings that are too short
-    if text.is_empty() {
+    // Check for strings that are too short (2 or fewer characters)
+    // The gibberish_or_not library requires at least 3 characters to work effectively
+    if text.len() <= 2 {
         return true;
     }
 

@@ -219,7 +219,7 @@ fn parse_toml_with_unknown_keys(contents: &str) -> Config {
 ///
 /// # Returns
 /// * `Ok(HashSet<String>)` - The loaded wordlist as a HashSet for O(1) lookups
-/// * `Err(io::Error)` - If the file cannot be opened or read
+/// * `Err(io::Error)` - If the file cannot be opened, read, or contains invalid UTF-8
 ///
 /// # Errors
 /// This function will return an error if:
@@ -228,19 +228,10 @@ fn parse_toml_with_unknown_keys(contents: &str) -> Config {
 /// * The file cannot be memory-mapped
 /// * The file contains invalid UTF-8 characters
 ///
-/// # Panics
-/// Panics if the file contains invalid UTF-8 when using memory mapping.
-///
 /// # Safety
-/// This implementation uses unsafe code in two places:
-/// 1. Memory mapping (unsafe { Mmap::map(&file) }):
-///    - This is unsafe because the memory map could become invalid if the underlying file is modified
-///    - We accept this risk since the wordlist is only loaded once at startup and not expected to change
-///
-/// 2. UTF-8 conversion (unsafe { std::str::from_utf8_unchecked(&mmap) }):
-///    - This is unsafe because it assumes the file contains valid UTF-8
-///    - We attempt to convert to UTF-8 first and panic if invalid, making this assumption safe
-///    - The unchecked version is used for performance since we verify UTF-8 validity first
+/// This implementation uses unsafe code for memory mapping (unsafe { Mmap::map(&file) }):
+/// - This is unsafe because the memory map could become invalid if the underlying file is modified
+/// - We accept this risk since the wordlist is only loaded once at startup and not expected to change
 pub fn load_wordlist<P: AsRef<Path>>(path: P) -> io::Result<HashSet<String>> {
     let file = File::open(path)?;
     let file_size = file.metadata()?.len();
@@ -266,16 +257,16 @@ pub fn load_wordlist<P: AsRef<Path>>(path: P) -> io::Result<HashSet<String>> {
     } else {
         // For large files, use memory mapping
         // First create the memory map
+        // SAFETY: The file handle is valid and we're only reading from the mmap.
+        // The mmap could become invalid if the file is modified, but since wordlists
+        // are only loaded once at startup and not expected to change, this is acceptable.
         let mmap = unsafe { Mmap::map(&file)? };
 
-        // Verify the file contains valid UTF-8 before proceeding
-        if std::str::from_utf8(&mmap).is_err() {
-            panic!("Wordlist file contains invalid UTF-8");
-        }
+        // Convert to UTF-8, returning an error if invalid
+        let content = std::str::from_utf8(&mmap)
+            .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
 
-        // Now we can safely use from_utf8_unchecked since we verified it's valid UTF-8
         let mut wordlist = HashSet::new();
-        let content = unsafe { std::str::from_utf8_unchecked(&mmap) };
         for line in content.lines() {
             let trimmed = line.trim();
             if !trimmed.is_empty() {

@@ -209,7 +209,7 @@ pub fn filter_and_get_decoders(_text_struct: &DecoderResult) -> Decoders {
     
     // Iterate over DECODER_MAP and collect references
     let components = DECODER_MAP.values()
-        .map(|decoder_box| decoder_box.get::<()>())
+        .map(|decoder_box| decoder_box.get())
         .collect();
 
     Decoders {

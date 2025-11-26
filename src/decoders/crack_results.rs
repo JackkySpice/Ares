@@ -1,6 +1,6 @@
 //! This module contains CrackSuccess and CrackFailure
-use crate::checkers::{checker_result::CheckResult, CheckerTypes, CHECKER_MAP};
-use crate::decoders::{DecoderType, DECODER_MAP};
+use crate::checkers::{checker_result::CheckResult, CHECKER_MAP};
+use crate::decoders::DECODER_MAP;
 
 use super::interface::Decoder;
 use serde::{Deserialize, Serialize};
@@ -97,7 +97,7 @@ impl<'de> Deserialize<'de> for CrackResult {
         let decoder = DECODER_MAP
             .get(temp_cr.decoder.as_str())
             .unwrap_or_else(|| panic!("Error during deserialization of CrackResult: could not find matching decoder for {}", temp_cr.decoder.as_str()))
-            .get::<DecoderType>();
+            .get();
         if temp_cr.checker_name.is_empty() {
             return Ok(CrackResult {
                 success: temp_cr.success,
@@ -114,7 +114,7 @@ impl<'de> Deserialize<'de> for CrackResult {
         let checker = CHECKER_MAP
             .get(temp_cr.checker_name.as_str())
             .unwrap_or_else(|| panic!("Error during deserialization of CrackResult: could not find matching checker for {}", temp_cr.checker_name.as_str()))
-            .get::<CheckerTypes>();
+            .get();
         Ok(CrackResult {
             success: temp_cr.success,
             encrypted_text: temp_cr.encrypted_text,
